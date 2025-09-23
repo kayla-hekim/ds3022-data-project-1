@@ -1,7 +1,15 @@
 *.db
 *.duckdb
 *.log
+
 *.parquet
+*.parquet.gz
+
 *.csv
 
 .DS_Store
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
