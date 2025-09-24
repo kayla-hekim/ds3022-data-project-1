@@ -19,19 +19,24 @@ def remove_duplicates(year_range=(2024,2025)):
         con = duckdb.connect(database='emissions.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove duplicates")
 
-        con.execute("SET schema='tlc';")
+        # con.execute("SET schema='tlc';")
 
+        colors = ["yellow", "green"]
         tables = []
         for year in year_range:
+            for color in colors:
+                for month in range(1,13):
+                    table = f"{color}_{year}_{month:02d}"
+                    tables.append(table)
             
 
         for each_table in tables:
             con.execute(f"""
-                CREATE TABLE synthdata_clean AS 
-                SELECT DISTINCT * FROM synthdata;
+                CREATE TABLE {each_table}_clean AS 
+                SELECT DISTINCT * FROM {each_table};
                         
-                DROP TABLE synthdata;
-                ALTER TABLE synthdata_clean RENAME TO synthdata;
+                DROP TABLE {each_table};
+                ALTER TABLE {each_table}_clean RENAME TO {each_table};
             """)
 
     except Exception as e:
