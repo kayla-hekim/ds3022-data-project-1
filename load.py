@@ -20,8 +20,8 @@ def load_parquet_files(years=range(2024, 2025)):
         # Connect to local DuckDB instance
         con = duckdb.connect(database='emissions.duckdb', read_only=False)
         logger.info("Connected to DuckDB instance for yellow green taxi parquets")
+        con.execute("INSTALL httpfs; LOAD httpfs;")
 
-        # con.execute("INSTALL httpfs; LOAD httpfs;")
         # con.execute("CREATE SCHEMA IF NOT EXISTS tlc;")
 
         # uploading and populating yellow 2024 tables from parquet
@@ -35,15 +35,19 @@ def load_parquet_files(years=range(2024, 2025)):
 
                 table_name = f"{color}_{year}_{month:02d}"
                 
-                con.execute(f"""
-                    -- SQL goes here
-                    DROP TABLE IF EXISTS {table_name};
-                    CREATE TABLE {table_name}
-                        AS
-                    SELECT * FROM read_parquet('{input_file}', union_by_name=true);
-                """)
-                logger.info(f"Dropped if exists and created table {table_name} in emissions db")
-                # time.sleep(60)
+                try:
+                    con.execute(f"""
+                        -- SQL goes here
+                        DROP TABLE IF EXISTS {table_name};
+                        CREATE TABLE {table_name}
+                            AS
+                        SELECT * FROM read_parquet('{input_file}', union_by_name=true);
+                    """)
+                    logger.info(f"Dropped if exists and created table {table_name} in emissions db")
+                    # time.sleep(60)
+                except Exception as e:
+                    logger.warning(f"Skipping {input_file} due to error: {e}")
+                    continue
             
 
             # uploading and populating green 2024 tables from parquet
@@ -54,15 +58,19 @@ def load_parquet_files(years=range(2024, 2025)):
 
                 table_name = f"{color}_{year}_{month:02d}"
                 
-                con.execute(f"""
-                    -- SQL goes here
-                    DROP TABLE IF EXISTS {table_name};
-                    CREATE TABLE {table_name}
-                        AS
-                    SELECT * FROM read_parquet('{input_file}', union_by_name=true);
-                """)
-                logger.info(f"Dropped if exists and created table {table_name} in emissions db")
-                # time.sleep(60)
+                try:
+                    con.execute(f"""
+                        -- SQL goes here
+                        DROP TABLE IF EXISTS {table_name};
+                        CREATE TABLE {table_name}
+                            AS
+                        SELECT * FROM read_parquet('{input_file}', union_by_name=true);
+                    """)
+                    logger.info(f"Dropped if exists and created table {table_name} in emissions db")
+                    # time.sleep(60)
+                except Exception as e:
+                    logger.warning(f"Skipping {input_file} due to error: {e}")
+                    continue
 
         con.execute("VACUUM;")
         logger.info("VACUUM completed")
