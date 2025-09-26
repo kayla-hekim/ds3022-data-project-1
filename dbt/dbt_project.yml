@@ -11,11 +11,15 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
+vars:
+  trips_schema: main
+  trips_database: src
+
 models:
   nyc_taxi_emissions:
     staging:
       +materialized: view
-    # transforms:
-    #   +materialized: table
+    transforms:
+      +materialized: table
     # marts:
     #   +materialized: table    
