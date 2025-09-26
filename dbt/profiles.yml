@@ -1,9 +1,10 @@
-taxi_co2:
+nyc_taxi_emissions:
   target: dev
   outputs:
     dev:
       type: duckdb
-      path: ''
+      path: '../emissions.duckdb'
+      # path: '../dbtcopy.duckdb' # for testing
       schema: main
       threads: 4
       keepalives_idle: 0

@@ -27,7 +27,7 @@ def remove_duplicates(years=range(2024, 2025)):
     con = None
 
     try:
-        con = duckdb.connect(database='cleancopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove duplicates")
 
         # con.execute("SET schema='tlc';")
@@ -71,7 +71,7 @@ def zero_passengers_removed(years=range(2024, 2025)):
     con = None
 
     try:
-        con = duckdb.connect(database='cleancopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with zero passengers")
 
         tables = get_yellow_green_tables(years)
@@ -97,7 +97,7 @@ def zero_miles_removed(years=range(2024, 2025)):
     con = None
 
     try:
-        con = duckdb.connect(database='cleancopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with zero miles")
 
         tables = get_yellow_green_tables(years)
@@ -123,7 +123,7 @@ def more_100mi_removed(years=range(2024, 2025)):
     con = None
 
     try:
-        con = duckdb.connect(database='cleancopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with more than 100 miles")
 
         tables = get_yellow_green_tables(years)
@@ -161,7 +161,7 @@ def more_24hr_removed(years=range(2024, 2025)):
     con = None
 
     try:
-        con = duckdb.connect(database='cleancopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with more than 24 hours")
 
         tables = get_yellow_green_tables(years)
@@ -214,7 +214,7 @@ def tests(years=range(2024, 2025)):
     con = None
     failures = []
     try:
-        con = duckdb.connect(database='cleancopy.duckdb', read_only=True)
+        con = duckdb.connect(database='emissions.duckdb', read_only=True)
         logger.info("Running tests for above methods...")
 
         tables = get_yellow_green_tables(years)

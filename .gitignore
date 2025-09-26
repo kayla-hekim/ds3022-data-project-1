@@ -13,3 +13,9 @@ __pycache__/
 *.pyo
 *.pyd
 .env
+
+# dbt thing?
+.user.yml
+target/
+logs/
+dbt_packages/

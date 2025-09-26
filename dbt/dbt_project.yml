@@ -1,8 +1,8 @@
-name: 'taxi_co2'
+name: 'nyc_taxi_emissions'
 version: '1.0.0'
 config-version: 2
 
-profile: 'taxi_co2'
+profile: 'nyc_taxi_emissions'
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -14,4 +14,8 @@ snapshot-paths: ["snapshots"]
 models:
   nyc_taxi_emissions:
     staging:
-      +materialized: table
+      +materialized: view
+    # transforms:
+    #   +materialized: table
+    # marts:
+    #   +materialized: table    
