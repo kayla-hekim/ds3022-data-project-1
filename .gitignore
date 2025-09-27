@@ -20,3 +20,6 @@ target/
 logs/
 dbt_packages/
 smth.txt
+
+
+temp_sql
