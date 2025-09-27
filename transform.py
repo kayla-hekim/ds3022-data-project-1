@@ -4,6 +4,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+# CHOSE TO DO DBT METHOD - THIS IS LOADING THE COMMAND AND USING IT
+# NO USE OF DUCKDB SCRIPT UNLESS YOU'RE TESTING WITH qa_print() OR export() METHODS COMMENTED OUT BELOW 
+
 
 logging.basicConfig(
     level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
