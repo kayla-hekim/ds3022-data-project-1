@@ -45,7 +45,7 @@ def load_parquet_files(years=range(2024, 2025)):
                     """)
 
                     logger.info(f"Dropped if exists and created table {table_name} for month {month:02d} in emissions db")
-                    # time.sleep(60)
+                    time.sleep(60)
                 except Exception as e:
                     logger.warning(f"Skipping {input_file} due to error: {e}")
                     continue
@@ -69,7 +69,7 @@ def load_parquet_files(years=range(2024, 2025)):
                         SELECT * FROM read_parquet('{input_file}', union_by_name=true);
                     """)
                     logger.info(f"Dropped if exists and created table {table_name} for month {month:02d} in emissions db")
-                    # time.sleep(60)
+                    time.sleep(60)
                 except Exception as e:
                     logger.warning(f"Skipping {input_file} due to error: {e}")
                     continue
@@ -89,7 +89,7 @@ def load_parquet_files(years=range(2024, 2025)):
 
 # Loading vehicle_emissions.csv into emissions db
 def load_vehicle_emissions_csv(file_name):
-    con = Nones
+    con = None
     table_name = "vehicle_emissions"
 
     try:

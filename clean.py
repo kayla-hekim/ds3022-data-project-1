@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 # get yellow green tables for later
 def get_yellow_green_tables(years=(2024, 2025)):    
     tables = []
-    con = duckdb.connect(database='emissions.duckdb', read_only=False)
+    # con = duckdb.connect(database='emissions.duckdb', read_only=False)
+    con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
+
 
     for year in years:
         table = drop_columns_yellow(con, f"yellow_{year}")
@@ -32,10 +34,9 @@ def get_yellow_green_tables(years=(2024, 2025)):
 # helper method - drop yellow columns
 def drop_columns_yellow(con, table):
     try:
-        clean_table = f"{table}_clean"
-        con.execute(f"DROP TABLE IF EXISTS {clean_table};")
+        clean_table = f"{table}"
         con.execute(f"""
-            CREATE TABLE {clean_table} AS
+            CREATE OR REPLACE TABLE {table} AS
             SELECT
                 tpep_pickup_datetime,
                 tpep_dropoff_datetime,
@@ -43,19 +44,23 @@ def drop_columns_yellow(con, table):
                 trip_distance
             FROM {table};
         """)
+
         return clean_table
     
     except Exception as e:
-        logger.error(f"Issue dropping yellow columns in {table}: {e}")
+        try:
+            con.execute(f"DROP TABLE IF EXISTS {clean_table};")
+        except Exception:
+            logger.error(f"Issue dropping yellow columns in {table}: {e}")
+            pass
         return None
 
 # helper method - drop green columns
 def drop_columns_green(con, table):
     try:
-        clean_table = f"{table}_clean"
-        con.execute(f"DROP TABLE IF EXISTS {clean_table};")
+        clean_table = f"{table}"
         con.execute(f"""
-            CREATE TABLE {clean_table} AS
+            CREATE OR REPLACE TABLE {table} AS
             SELECT
                 lpep_pickup_datetime,
                 lpep_dropoff_datetime,
@@ -63,10 +68,15 @@ def drop_columns_green(con, table):
                 trip_distance
             FROM {table};
         """)
+
         return clean_table
     
     except Exception as e:
-        logger.error(f"Issue dropping green columns in {table}: {e}")
+        try:
+            con.execute(f"DROP TABLE IF EXISTS {clean_table};")
+        except Exception:
+            logger.error(f"Issue dropping green columns in {table}: {e}")
+            pass
         return None
 
 
@@ -75,7 +85,9 @@ def remove_duplicates(tables):
     con = None
 
     try:
-        con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
+
         logger.info("Connected to DuckDB, ready to remove duplicates")
 
         # con.execute("SET schema='tlc';")
@@ -83,24 +95,16 @@ def remove_duplicates(tables):
             
         for each_table in tables:
             con.execute(f"""
-                DROP TABLE IF EXISTS {each_table}_clean;
-                CREATE TABLE {each_table}_clean AS 
+                CREATE OR REPLACE TABLE {each_table} AS
                 SELECT DISTINCT * FROM {each_table};
-                        
-                DROP TABLE {each_table};
-                ALTER TABLE {each_table}_clean RENAME TO {each_table};
             """)
             logger.info(f"{each_table}: removed duplicate values")
 
 
         table_name = "vehicle_emissions"
         con.execute(f"""
-            DROP TABLE IF EXISTS {table_name}_clean;
-            CREATE TABLE {table_name}_clean AS 
+            CREATE OR REPLACE TABLE {table_name} AS
             SELECT DISTINCT * FROM {table_name};
-                    
-            DROP TABLE {table_name};
-            ALTER TABLE {table_name}_clean RENAME TO {table_name};
         """)
         logger.info(f"{table_name}: removed duplicate values in vehicle_emissions")
 
@@ -118,7 +122,8 @@ def zero_passengers_removed(tables):
     con = None
 
     try:
-        con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with zero passengers")
 
         # tables = get_yellow_green_tables(years)
@@ -150,7 +155,8 @@ def zero_miles_removed(tables):
     con = None
 
     try:
-        con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with zero miles")
 
         # tables = get_yellow_green_tables(years)
@@ -182,7 +188,8 @@ def more_100mi_removed(tables):
     con = None
 
     try:
-        con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with more than 100 miles")
 
         # tables = get_yellow_green_tables(years)
@@ -225,7 +232,8 @@ def more_24hr_removed(tables):
     con = None
 
     try:
-        con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with more than 24 hours")
 
         # tables = get_yellow_green_tables(years)
@@ -262,7 +270,8 @@ def tests(tables):
     con = None
     failures = []
     try:
-        con = duckdb.connect(database='emissions.duckdb', read_only=True)
+        # con = duckdb.connect(database='emissions.duckdb', read_only=True)
+        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
         logger.info("Running tests for above methods...")
 
         # tables = get_yellow_green_tables(years)
