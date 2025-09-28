@@ -14,8 +14,7 @@ logger = logging.getLogger(__name__)
 def get_yellow_green_tables(years=(2024, 2025)):    
     tables = []
     con = duckdb.connect(database='emissions.duckdb', read_only=False)
-    # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
-
+    # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False) # testing
 
     for year in years:
         table = drop_columns_yellow(con, f"yellow_{year}")
@@ -33,8 +32,9 @@ def get_yellow_green_tables(years=(2024, 2025)):
 
 # helper method - drop yellow columns
 def drop_columns_yellow(con, table):
+    temp = f"{table}_clean"
     try:
-        clean_table = f"{table}"
+        # clean_table = f"{table}"
         con.execute(f"""
             CREATE OR REPLACE TABLE {table} AS
             SELECT
@@ -44,21 +44,15 @@ def drop_columns_yellow(con, table):
                 trip_distance
             FROM {table};
         """)
-
-        return clean_table
+        return table
     
     except Exception as e:
-        try:
-            con.execute(f"DROP TABLE IF EXISTS {clean_table};")
-        except Exception:
-            logger.error(f"Issue dropping yellow columns in {table}: {e}")
-            pass
+        logger.error(f"Issue dropping yellow columns in {table}: {e}")
         return None
 
 # helper method - drop green columns
 def drop_columns_green(con, table):
     try:
-        clean_table = f"{table}"
         con.execute(f"""
             CREATE OR REPLACE TABLE {table} AS
             SELECT
@@ -68,15 +62,10 @@ def drop_columns_green(con, table):
                 trip_distance
             FROM {table};
         """)
-
-        return clean_table
+        return table
     
     except Exception as e:
-        try:
-            con.execute(f"DROP TABLE IF EXISTS {clean_table};")
-        except Exception:
-            logger.error(f"Issue dropping green columns in {table}: {e}")
-            pass
+        logger.error(f"Issue dropping green columns in {table}: {e}")
         return None
 
 
@@ -393,7 +382,8 @@ def tests(tables):
 # Call all methods from load.py here
 if __name__ == "__main__":
     # get tables for later methods:
-    years = range(2024,2025)
+    # years = range(2015, 2025) 
+    years = range(2023, 2025) # testing
     tables = get_yellow_green_tables(years)
 
     # remove duplicates

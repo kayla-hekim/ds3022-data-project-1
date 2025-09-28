@@ -45,10 +45,14 @@ def load_parquet_files(years=range(2024, 2025)):
                     """)
 
                     logger.info(f"Dropped if exists and created table {table_name} for month {month:02d} in emissions db")
-                    time.sleep(60)
+                    time.sleep(45)
                 except Exception as e:
                     logger.warning(f"Skipping {input_file} due to error: {e}")
                     continue
+
+            # table_count =  con.execute(f"SELECT COUNT(*) AS cnt FROM {table_name}").fetchone()[0]
+            # print(f"Count for table {table_name}: {table_count}")
+            # logger.info(f"Count for table {table_name}: {table_count}")
             
 
             # uploading and populating green 2024 table from parquet
@@ -69,16 +73,20 @@ def load_parquet_files(years=range(2024, 2025)):
                         SELECT * FROM read_parquet('{input_file}', union_by_name=true);
                     """)
                     logger.info(f"Dropped if exists and created table {table_name} for month {month:02d} in emissions db")
-                    time.sleep(60)
+                    time.sleep(45)
                 except Exception as e:
                     logger.warning(f"Skipping {input_file} due to error: {e}")
                     continue
+
+            # table_count =  con.execute(f"SELECT COUNT(*) AS cnt FROM {table_name}").fetchone()[0]
+            # print(f"Count for table {table_name}: {table_count}")
+            # logger.info(f"Count for table {table_name}: {table_count}")
 
         # con.execute("VACUUM;") # had issues with disc space - research said this would help?
         # logger.info("VACUUM completed")
 
     except Exception as e:
-        # print(f"An error occurred for yellow green taxi parquet loading: {e}")
+        print(f"An error occurred for yellow green taxi parquet loading: {e}")
         logger.error(f"An error occurred yellow green taxi parquet loading: {e}")
 
     finally:
@@ -112,7 +120,7 @@ def load_vehicle_emissions_csv(file_name):
         logger.info(f"{table_name} has {cnt} rows")
 
     except Exception as e:
-        # print(f"An error occurred for vehicle emissions loading: {e}")
+        print(f"An error occurred for vehicle emissions loading: {e}")
         logger.error(f"An error occurred for vehicle emissions loading: {e}")
     
     finally:
@@ -142,6 +150,7 @@ def basic_data_summarizations(years=range(2024, 2025)):
                 year_num = 0
                 logger.warning(f"{table} missing or unreadable in yellow sum: {e}")
             total_yellow += year_num
+            print(f"{table} rows: {year_num}")
             logger.info(f"{table} rows: {year_num}")
 
         for year in years:
@@ -152,7 +161,10 @@ def basic_data_summarizations(years=range(2024, 2025)):
                 year_num = 0
                 logger.warning(f"{table} missing or unreadable in green sum: {e}")
             total_green += year_num
+            print(f"{table} rows: {year_num}")
             logger.info(f"{table} rows: {year_num}")
+
+        print("\n")
 
         print(f"Total yellow trips (all years): {total_yellow}")
         print(f"Total green trips (all years): {total_green}")
@@ -173,7 +185,7 @@ def basic_data_summarizations(years=range(2024, 2025)):
             table = f"yellow_{year}"
             try:
                 sum_distance, num_rows = con.execute(f"""
-                    SELECT COALESCE(SUM(trip_distance),0)::DOUBLE, COUNT(*)
+                    SELECT CAST(COALESCE(SUM(trip_distance), 0) AS DOUBLE), COUNT(trip_distance)
                     FROM {table}
                 """).fetchone()
             except Exception as e:
@@ -192,6 +204,8 @@ def basic_data_summarizations(years=range(2024, 2025)):
         overall_yellow_avg = 0.0
         if sum_rows_yellow_all:
             overall_yellow_avg = (sum_distance_yellow_all / sum_rows_yellow_all) 
+        else:
+            overall_yellow_avg = 0.0
 
 
         sum_distance_green_all = 0.0
@@ -202,7 +216,7 @@ def basic_data_summarizations(years=range(2024, 2025)):
             table = f"green_{year}"
             try:
                 sum_distance, num_rows = con.execute(f"""
-                    SELECT COALESCE(SUM(trip_distance),0)::DOUBLE, COUNT(*)
+                    SELECT CAST(COALESCE(SUM(trip_distance), 0) AS DOUBLE), COUNT(trip_distance)
                     FROM {table}
                 """).fetchone()
             except Exception as e:
@@ -221,6 +235,8 @@ def basic_data_summarizations(years=range(2024, 2025)):
         overall_green_avg = 0.0
         if sum_rows_green_all:
             overall_green_avg = (sum_distance_green_all / sum_rows_green_all)
+        else:
+            overall_green_avg = 0.0
         
 
         print(f"total average for all yellow tables: {overall_yellow_avg}")
@@ -275,9 +291,11 @@ def basic_data_summarizations(years=range(2024, 2025)):
 
 # Call all methods from load.py here
 if __name__ == "__main__":
+    years = range(2015, 2025)
+    # years = range(2023, 2025) # testing
     # populate and create tables yellow green 
-    load_parquet_files()
+    load_parquet_files(years)
     vehicle_emissions_csv = './data/vehicle_emissions.csv'
     load_vehicle_emissions_csv(vehicle_emissions_csv)
     # summarizations
-    basic_data_summarizations()
+    basic_data_summarizations(years)
