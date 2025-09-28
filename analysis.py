@@ -121,12 +121,15 @@ def pretty_print_largest_carbon_trip(color, largest_carbon, years=range(2024, 20
 
     if not largest_carbon:
         print(f"FOR {color.upper()}, YEAR RANGE {start_year}-{end_year}: no result found")
+        logger.info(f"FOR {color.upper()}, YEAR RANGE {start_year}-{end_year}: no result found")
         return
     
     print(f"FOR {color.upper()}, YEAR RANGE {start_year}-{end_year}:")
+    logger.info(f"FOR {color.upper()}, YEAR RANGE {start_year}-{end_year}:")
 
     for key, value in largest_carbon.items():
         print(f" - {key}: {value},")
+        logger.info(f" - {key}: {value},")
 
 
 
@@ -583,50 +586,60 @@ if __name__ == "__main__":
     years = range(2024, 2025)
 
     # SINGLE LARGEST CARBON TRIP OF THE YEARS - YELLOW THEN GREEN:
-    # yellow_largest_carbon = single_largest_carbon_trip_year('yellow')
-    # green_largest_carbon = single_largest_carbon_trip_year('green')
-    # pretty_print_largest_carbon_trip("yellow", yellow_largest_carbon, years)
-    # print("\n")
-    # pretty_print_largest_carbon_trip("green", green_largest_carbon, years)
+    print("1. Single largest carbon trip of year(s):\n")
+    for year in years:
+        yellow_largest_carbon = single_largest_carbon_trip_year('yellow')
+        green_largest_carbon = single_largest_carbon_trip_year('green')
+        pretty_print_largest_carbon_trip("yellow", yellow_largest_carbon, years)
+        print("\n")
+        pretty_print_largest_carbon_trip("green", green_largest_carbon, years)
+
+        print("\n")
+    print("\n")
 
     # MIN AND MAX CARBON HOURS (AVERAGES) - YELLOW THEN GREEN:
-    # results_hours = carbon_heavy_light_hour()
-    # yellow_hour_min, yellow_hour_max, green_hour_min, green_hour_max = results_hours
-    # print(f"yellow carbon hour min: (hour {yellow_hour_min[0]}, {yellow_hour_min[1]:.5f} kg CO2 per trip), \nyellow carbon hour max: (hour {yellow_hour_max[0]}, {yellow_hour_max[1]:.5f} kg CO2 per trip)\n")
-    # print(f"green carbon hour min: (hour {green_hour_min[0]}, {green_hour_min[1]:.5f} kg CO2 per trip), \ngreen carbon hour max: (hour {green_hour_max[0]}, {green_hour_max[1]:.5f} kg CO2 per trip)\n")
+    print("2. Carbon heavy and light hours for rides, yellow then green:")
+    results_hours = carbon_heavy_light_hour()
+    yellow_hour_min, yellow_hour_max, green_hour_min, green_hour_max = results_hours
+    print(f"yellow carbon hour min: (hour {yellow_hour_min[0]}, {yellow_hour_min[1]:.5f} kg CO2 per trip), \nyellow carbon hour max: (hour {yellow_hour_max[0]}, {yellow_hour_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"yellow carbon hour min: (hour {yellow_hour_min[0]}, {yellow_hour_min[1]:.5f} kg CO2 per trip), \nyellow carbon hour max: (hour {yellow_hour_max[0]}, {yellow_hour_max[1]:.5f} kg CO2 per trip)\n")
+    print(f"green carbon hour min: (hour {green_hour_min[0]}, {green_hour_min[1]:.5f} kg CO2 per trip), \ngreen carbon hour max: (hour {green_hour_max[0]}, {green_hour_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"green carbon hour min: (hour {green_hour_min[0]}, {green_hour_min[1]:.5f} kg CO2 per trip), \ngreen carbon hour max: (hour {green_hour_max[0]}, {green_hour_max[1]:.5f} kg CO2 per trip)\n")
+    print("\n")
 
     # MIN AND MAX CARBON DOW (AVERAGES) - YELLOW THEN GREEN:
-    # results_DOW = carbon_heavy_light_DOW()
-    # yellow_DOW_min, yellow_DOW_max, green_DOW_min, green_DOW_max = results_DOW
-    # print(f"yellow carbon DOW min: ({yellow_DOW_min[0]}, {yellow_DOW_min[1]:.5f} kg CO2 per trip), \nyellow carbon DOW max: ({yellow_DOW_max[0]}, {yellow_DOW_max[1]:.5f} kg CO2 per trip)\n")
-    # print(f"green carbon DOW min: ({green_DOW_min[0]}, {green_DOW_min[1]:.5f} kg CO2 per trip), \ngreen carbon DOW max: ({green_DOW_max[0]}, {green_DOW_max[1]:.5f} kg CO2 per trip)\n")
+    print("3. Carbon heavy and light days of week for rides, yellow then green:")
+    results_DOW = carbon_heavy_light_DOW()
+    yellow_DOW_min, yellow_DOW_max, green_DOW_min, green_DOW_max = results_DOW
+    print(f"yellow carbon DOW min: ({yellow_DOW_min[0]}, {yellow_DOW_min[1]:.5f} kg CO2 per trip), \nyellow carbon DOW max: ({yellow_DOW_max[0]}, {yellow_DOW_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"yellow carbon DOW min: ({yellow_DOW_min[0]}, {yellow_DOW_min[1]:.5f} kg CO2 per trip), \nyellow carbon DOW max: ({yellow_DOW_max[0]}, {yellow_DOW_max[1]:.5f} kg CO2 per trip)\n")
+    print(f"green carbon DOW min: ({green_DOW_min[0]}, {green_DOW_min[1]:.5f} kg CO2 per trip), \ngreen carbon DOW max: ({green_DOW_max[0]}, {green_DOW_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"green carbon DOW min: ({green_DOW_min[0]}, {green_DOW_min[1]:.5f} kg CO2 per trip), \ngreen carbon DOW max: ({green_DOW_max[0]}, {green_DOW_max[1]:.5f} kg CO2 per trip)\n")
+    print("\n")
 
     # MIN AND MAX CARBON WEEKS (AVERAGES) - YELLOW THEN GREEN:
-    # results_weeks = carbon_heavy_light_week()
-    # yellow_week_min, yellow_week_max, green_week_min, green_week_max = results_weeks
-    # print(f"yellow carbon week min: (week {yellow_week_min[0]},  {yellow_week_min[1]:.5f} kg CO2 per trip), \nyellow carbon week max: (week {yellow_week_max[0]},  {yellow_week_max[1]:.5f} kg CO2 per trip)\n")
-    # print(f"green carbon week min: (week {green_week_min[0]},  {green_week_min[1]:.5f} kg CO2 per trip), \ngreen carbon week max: (week {green_week_max[0]},  {green_week_max[1]:.5f} kg CO2 per trip)\n")
+    print("4. Carbon heavy and light weeks of years for rides, yellow then green:")
+    results_weeks = carbon_heavy_light_week()
+    yellow_week_min, yellow_week_max, green_week_min, green_week_max = results_weeks
+    print(f"yellow carbon week min: (week {yellow_week_min[0]},  {yellow_week_min[1]:.5f} kg CO2 per trip), \nyellow carbon week max: (week {yellow_week_max[0]},  {yellow_week_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"yellow carbon week min: (week {yellow_week_min[0]},  {yellow_week_min[1]:.5f} kg CO2 per trip), \nyellow carbon week max: (week {yellow_week_max[0]},  {yellow_week_max[1]:.5f} kg CO2 per trip)\n")
+    print(f"green carbon week min: (week {green_week_min[0]},  {green_week_min[1]:.5f} kg CO2 per trip), \ngreen carbon week max: (week {green_week_max[0]},  {green_week_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"green carbon week min: (week {green_week_min[0]},  {green_week_min[1]:.5f} kg CO2 per trip), \ngreen carbon week max: (week {green_week_max[0]},  {green_week_max[1]:.5f} kg CO2 per trip)\n")
+    print("\n")
 
     # MIN AND MAX CARBON MONTHS (AVERAGES) - YELLOW THEN GREEN:
-    # results_months = carbon_heavy_light_month()
-    # yellow_mo_min, yellow_mo_max, green_mo_min, green_mo_max = results_months
-    # print(f"yellow carbon month min: (month {yellow_mo_min[0]},  {yellow_mo_min[1]:.5f} kg CO2 per trip), \nyellow carbon month max: (month {yellow_mo_max[0]},  {yellow_mo_max[1]:.5f} kg CO2 per trip)\n")
-    # print(f"green carbon month min: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
+    print("5. Carbon heavy and light months of years for rides, yellow then green:")
+    results_months = carbon_heavy_light_month()
+    yellow_mo_min, yellow_mo_max, green_mo_min, green_mo_max = results_months
+    print(f"yellow carbon month min: (month {yellow_mo_min[0]},  {yellow_mo_min[1]:.5f} kg CO2 per trip), \nyellow carbon month max: (month {yellow_mo_max[0]},  {yellow_mo_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"yellow carbon month min: (month {yellow_mo_min[0]},  {yellow_mo_min[1]:.5f} kg CO2 per trip), \nyellow carbon month max: (month {yellow_mo_max[0]},  {yellow_mo_max[1]:.5f} kg CO2 per trip)\n")
+    print(f"green carbon month min: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"green carbon month min: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
+    print("\n")
     
+    # PLOTTING FOR MONTH BY CO2 (Matplotlib.pyplot)
+    print("6. plotting the yellow and green months b CO2 levels totals...")
+    logger.info("plotting the yellow and green months b CO2 levels totals:")
     plot_co2_month_by_co2totals()
-
-
-# ## Analyze
-
-# Complete the `analysis.py` script to report the following calculations using DuckDB/SQL. You should give one answer for each cab type, YELLOW and GREEN:
-
-# 1. What was the single largest carbon producing trip of the year for YELLOW and GREEN trips? (One result for each type)
-# 2. Across the entire year, what on average are the most carbon heavy and carbon light hours of the day for YELLOW and for GREEN trips? (1-24)
-# 3. Across the entire year, what on average are the most carbon heavy and carbon light days of the week for YELLOW and for GREEN trips? (Sun-Sat)
-# 4. Across the entire year, what on average are the most carbon heavy and carbon light weeks of the year for YELLOW and for GREEN trips? (1-52)
-# 5. Across the entire year, what on average are the most carbon heavy and carbon light months of the year for YELLOW and for GREEN trips? (Jan-Dec)
-# 6. Use a plotting library of your choice (`matplotlib`, `seaborn`, etc.) to generate a time-series plot or histogram with MONTH
-# along the X-axis and CO2 totals along the Y-axis. Render two lines/bars/plots of data, one each for YELLOW and GREEN taxi trip CO2 totals.
-
-# Your script should give text outputs for each calculation WITH a label explaining the value. The plot should be output as a PNG/JPG/GIF image 
-# committed within your project.
+    print("Plotting finished! Should be in this directory as a png.")
+    logger.info("Finished subroutine in plotting the yellow and green months b CO2 levels totals.")
