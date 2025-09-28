@@ -1,6 +1,5 @@
 {{ config(materialized='table') }}
 
-{% set months = range(1, 13) %}
 {% set years = [2024] %}
 {% set colors = ['yellow', 'green'] %}
 {% set raw_schema = 'main' %}

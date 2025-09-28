@@ -70,12 +70,7 @@ SELECT
     dropoff_ts,
     trip_distance_mi,
     passenger_count,
-    fare_amount,
-    total_amount,
-    pickup_location_id,
-    dropoff_location_id,
-    vendor_id,
-    payment_type,
+    
     hour_of_day,
     day_of_week,
     week_of_year,

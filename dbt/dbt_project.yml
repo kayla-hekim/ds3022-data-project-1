@@ -18,7 +18,7 @@ vars:
 models:
   nyc_taxi_emissions:
     staging:
-      +materialized: view
+      +materialized: table
     transforms:
       +materialized: table
     # marts:

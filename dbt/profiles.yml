@@ -3,8 +3,8 @@ nyc_taxi_emissions:
   outputs:
     dev:
       type: duckdb
-      path: '../emissions.duckdb'
-      # path: '../emissionscopy.duckdb' # for testing
+      # path: '../emissions.duckdb'
+      path: '../emissionscopy.duckdb' # for testing
       schema: main
       threads: 4
       keepalives_idle: 0
