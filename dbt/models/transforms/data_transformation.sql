@@ -1,4 +1,4 @@
-{{ config(materialized='table') }}
+{{ config(materialized='table', pre_hook="SET TimeZone='America/New_York';") }}
 
 
 
@@ -23,20 +23,20 @@ mph_calc AS (
         CASE
             WHEN total_hours > 0 THEN trip_distance_mi / total_hours
             ELSE NULL
-        END AS mph_per_trip
+        END AS avg_mph
     FROM with_hours
 ),
 
 
 
--- mph_calc, trip_hour, trip_day_of_week, week_number, trip_month_num
+-- avg_mph, hour_of_day, day_of_week, week_of_year, month_of_year
 time_features AS (
     SELECT
         mph_calc.*, -- mph per trip (above)
-        EXTRACT(HOUR FROM pickup_ts) AS trip_hour, -- calculate trip hour
-        STRFTIME(pickup_ts, '%A') AS trip_day_of_week, -- calculate trip day of week
-        EXTRACT(WEEK FROM pickup_ts) AS week_number, -- calculate week number
-        EXTRACT(MONTH FROM pickup_ts) AS trip_month_num, -- calculate month
+        EXTRACT(HOUR FROM pickup_ts) AS hour_of_day, -- calculate trip hour
+        STRFTIME(pickup_ts, '%A')    AS day_of_week, -- calculate trip day of week
+        CAST(STRFTIME(CAST(pickup_ts AS DATE), '%V') AS INT) AS week_of_year, -- calculate week number
+        EXTRACT(MONTH FROM CAST(pickup_ts AS DATE)) AS month_of_year, -- calculate month
         CASE lower(taxi_color)
             WHEN 'yellow_taxi' THEN 'yellow_taxi'
             WHEN 'green_taxi'  THEN 'green_taxi'
@@ -58,13 +58,13 @@ with_co2_factors AS (
     SELECT
         time_features.*,
         co2_factors.co2_kg_per_mile,
-        time_features.trip_distance_mi * co2_factors.co2_kg_per_mile AS co2_kg_per_trip
+        time_features.trip_distance_mi * co2_factors.co2_kg_per_mile AS trip_co2_kgs
     FROM time_features
     LEFT JOIN co2_factors USING (vehicle_type)
 )
 
 
-
+-- only want certain columns
 SELECT 
     pickup_ts,
     dropoff_ts,
@@ -76,12 +76,12 @@ SELECT
     dropoff_location_id,
     vendor_id,
     payment_type,
-    trip_hour,
-    trip_day_of_week,
-    week_number,
-    trip_month_num,
-    mph_per_trip,
-    co2_kg_per_trip,
+    hour_of_day,
+    day_of_week,
+    week_of_year,
+    month_of_year,
+    avg_mph,
+    trip_co2_kgs,
     vehicle_type
     -- *
 FROM with_co2_factors

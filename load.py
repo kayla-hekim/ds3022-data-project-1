@@ -21,28 +21,28 @@ def load_parquet_files(years=range(2024, 2025)):
         con = duckdb.connect(database='emissions.duckdb', read_only=False)
         logger.info("Connected to DuckDB instance for yellow green taxi parquets")
         con.execute("INSTALL httpfs; LOAD httpfs;")
+        con.execute("PRAGMA enable_object_cache=true;")
 
         # con.execute("CREATE SCHEMA IF NOT EXISTS tlc;")
 
-        # uploading and populating yellow 2024 tables from parquet
         # year = "2024"
-        
         for year in years:
+            # uploading and populating yellow 2024 table from parquet
             color = "yellow"
-            for month in range(1,13):
+            table_name = f"{color}_{year}"
+            con.execute(f"DROP TABLE IF EXISTS {table_name};")
+            con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM read_parquet('https://d37ci6vzurychx.cloudfront.net/trip-data/{color}_tripdata_{year}-01.parquet', union_by_name=true);")
+
+            for month in range(2,13):
                 input_file = f"https://d37ci6vzurychx.cloudfront.net/trip-data/{color}_tripdata_{year}-{month:02d}.parquet"
                 logger.info(f"working on {input_file} now...")
-
-                table_name = f"{color}_{year}_{month:02d}"
                 
                 try:
                     con.execute(f"""
-                        -- SQL goes here
-                        DROP TABLE IF EXISTS {table_name};
-                        CREATE TABLE {table_name}
-                            AS
+                        INSERT INTO {table_name}
                         SELECT * FROM read_parquet('{input_file}', union_by_name=true);
                     """)
+
                     logger.info(f"Dropped if exists and created table {table_name} in emissions db")
                     # time.sleep(60)
                 except Exception as e:
@@ -50,20 +50,19 @@ def load_parquet_files(years=range(2024, 2025)):
                     continue
             
 
-            # uploading and populating green 2024 tables from parquet
+            # uploading and populating green 2024 table from parquet
             color = "green"
-            for month in range(1,13):
+            table_name = f"{color}_{year}"
+            con.execute(f"DROP TABLE IF EXISTS {table_name};")
+            con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM read_parquet('https://d37ci6vzurychx.cloudfront.net/trip-data/{color}_tripdata_{year}-01.parquet', union_by_name=true);")
+
+            for month in range(2,13):
                 input_file = f"https://d37ci6vzurychx.cloudfront.net/trip-data/{color}_tripdata_{year}-{month:02d}.parquet"
                 logger.info(f"working on {input_file} now...")
-
-                table_name = f"{color}_{year}_{month:02d}"
                 
                 try:
                     con.execute(f"""
-                        -- SQL goes here
-                        DROP TABLE IF EXISTS {table_name};
-                        CREATE TABLE {table_name}
-                            AS
+                        INSERT INTO {table_name}
                         SELECT * FROM read_parquet('{input_file}', union_by_name=true);
                     """)
                     logger.info(f"Dropped if exists and created table {table_name} in emissions db")
@@ -72,8 +71,15 @@ def load_parquet_files(years=range(2024, 2025)):
                     logger.warning(f"Skipping {input_file} due to error: {e}")
                     continue
 
-        con.execute("VACUUM;")
-        logger.info("VACUUM completed")
+        # con.execute("VACUUM;") # had issues with disc space - research said this would help?
+        # logger.info("VACUUM completed")
+
+        # check counts of tables yellow green
+        for t in [f"yellow_{year}", f"green_{year}"]:
+            n = con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+            print(f"{t} rows: {n}")
+            logger.info(f"{t} rows: {n}")
+
 
     except Exception as e:
         # print(f"An error occurred for yellow green taxi parquet loading: {e}")
