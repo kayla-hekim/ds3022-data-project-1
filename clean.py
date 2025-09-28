@@ -13,8 +13,8 @@ logger = logging.getLogger(__name__)
 # get yellow green tables for later
 def get_yellow_green_tables(years=(2024, 2025)):    
     tables = []
-    # con = duckdb.connect(database='emissions.duckdb', read_only=False)
-    con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
+    con = duckdb.connect(database='emissions.duckdb', read_only=False)
+    # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
 
 
     for year in years:
@@ -85,8 +85,8 @@ def remove_duplicates(tables):
     con = None
 
     try:
-        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
-        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
 
         logger.info("Connected to DuckDB, ready to remove duplicates")
 
@@ -122,8 +122,8 @@ def zero_passengers_removed(tables):
     con = None
 
     try:
-        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
-        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with zero passengers")
 
         # tables = get_yellow_green_tables(years)
@@ -155,8 +155,8 @@ def zero_miles_removed(tables):
     con = None
 
     try:
-        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
-        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with zero miles")
 
         # tables = get_yellow_green_tables(years)
@@ -188,8 +188,8 @@ def more_100mi_removed(tables):
     con = None
 
     try:
-        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
-        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with more than 100 miles")
 
         # tables = get_yellow_green_tables(years)
@@ -232,8 +232,8 @@ def more_24hr_removed(tables):
     con = None
 
     try:
-        # con = duckdb.connect(database='emissions.duckdb', read_only=False)
-        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=False)
+        # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
         logger.info("Connected to DuckDB, ready to remove rides with more than 24 hours")
 
         # tables = get_yellow_green_tables(years)
@@ -270,8 +270,8 @@ def tests(tables):
     con = None
     failures = []
     try:
-        # con = duckdb.connect(database='emissions.duckdb', read_only=True)
-        con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
+        con = duckdb.connect(database='emissions.duckdb', read_only=True)
+        # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
         logger.info("Running tests for above methods...")
 
         # tables = get_yellow_green_tables(years)
