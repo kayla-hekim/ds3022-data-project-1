@@ -2,7 +2,6 @@ import duckdb
 import logging
 
 
-
 logging.basicConfig(
     level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s',
     filename='clean.log'
@@ -16,27 +15,40 @@ def get_yellow_green_tables(years=(2024, 2025)):
     con = duckdb.connect(database='emissions.duckdb', read_only=False)
     # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False) # testing
 
-    for year in years:
-        table = drop_columns_yellow(con, f"yellow_{year}")
-        if table:
-            tables.append(table)
+    try:
+        for year in years:
+            table = f"yellow_{year}"
+            table = remove_duplicates_yellow_green(con, table)
+            if not table:  
+                continue
+            table = drop_columns_yellow(con, table)
+            if table:
+                tables.append(table)
 
-    for year in years:
-        table = drop_columns_green(con, f"green_{year}")
-        if table:
-            tables.append(table)
+        for year in years:
+            table = f"green_{year}"
+            table = remove_duplicates_yellow_green(con, table)
+            if not table:  
+                continue
+            table = drop_columns_green(con, table)
+            if table:
+                tables.append(table)
 
-    con.close()
-    return tables
+        return tables
+    
+    finally:
+        con.close()
+    
 
 
 # helper method - drop yellow columns
 def drop_columns_yellow(con, table):
     temp = f"{table}_clean"
     try:
-        # clean_table = f"{table}"
+        # transaction begin/commit documentation: https://duckdb.org/docs/stable/sql/statements/transactions.html
+        con.execute("BEGIN TRANSACTION;")
         con.execute(f"""
-            CREATE OR REPLACE TABLE {table} AS
+            CREATE OR REPLACE TABLE {temp} AS
             SELECT
                 tpep_pickup_datetime,
                 tpep_dropoff_datetime,
@@ -44,17 +56,33 @@ def drop_columns_yellow(con, table):
                 trip_distance
             FROM {table};
         """)
+        con.execute(f"DROP TABLE {table};")
+        con.execute(f"ALTER TABLE {temp} RENAME TO {table};")
+        con.execute("COMMIT;")
         return table
     
     except Exception as e:
         logger.error(f"Issue dropping yellow columns in {table}: {e}")
+
+        try:
+            con.execute("ROLLBACK;")
+        except Exception:
+            pass
+
+        try:
+            con.execute(f"DROP TABLE IF EXISTS {temp};")
+        except Exception:
+            pass
+
         return None
 
 # helper method - drop green columns
 def drop_columns_green(con, table):
+    temp = f"{table}_clean"
     try:
+        con.execute("BEGIN TRANSACTION;")
         con.execute(f"""
-            CREATE OR REPLACE TABLE {table} AS
+            CREATE OR REPLACE TABLE {temp} AS
             SELECT
                 lpep_pickup_datetime,
                 lpep_dropoff_datetime,
@@ -62,44 +90,102 @@ def drop_columns_green(con, table):
                 trip_distance
             FROM {table};
         """)
+        con.execute(f"DROP TABLE {table};")
+        con.execute(f"ALTER TABLE {temp} RENAME TO {table};")
+        con.execute("COMMIT;")
         return table
     
     except Exception as e:
         logger.error(f"Issue dropping green columns in {table}: {e}")
+
+        try:
+            con.execute("ROLLBACK;")
+        except Exception:
+            pass
+
+        try:
+            con.execute(f"DROP TABLE IF EXISTS {temp};")
+        except Exception:
+            pass
+        
+        return None
+    
+
+def remove_duplicates_yellow_green(con, table):
+    temp = f"{table}_rmduplicates"
+    try:
+        con.execute(f"""BEGIN TRANSACTION;""")
+        con.execute(f"DROP TABLE IF EXISTS {temp};")
+        con.execute(f"""
+            CREATE OR REPLACE TABLE {temp} AS
+            SELECT DISTINCT * FROM {table};
+        """)
+        con.execute(f"DROP TABLE {table};")
+        con.execute(f"ALTER TABLE {temp} RENAME TO {table};")
+        con.execute(f"""COMMIT;""")
+        return table
+    
+    except Exception as e:
+        print(f"wasn't able to remove duplicates for {table}")
+        logger.error(f"wasn't able to remove duplicates for {table}")
+
+        try: 
+            con.execute("ROLLBACK;")
+        except Exception as e: 
+            pass
+        try: 
+            con.execute(f"DROP TABLE IF EXISTS {temp};")
+        except Exception as e: 
+            pass
+        
         return None
 
 
 # remove duplicates
-def remove_duplicates(tables):
+def remove_duplicates_vehicle_emissions():
     con = None
 
     try:
         con = duckdb.connect(database='emissions.duckdb', read_only=False)
         # con = duckdb.connect(database='emissionscopy.duckdb', read_only=False)
 
-        logger.info("Connected to DuckDB, ready to remove duplicates")
+        logger.info("Connected to DuckDB, ready to remove duplicates for vehicle_emissions")
 
-        # con.execute("SET schema='tlc';")
-        # tables = get_yellow_green_tables(years)
-            
-        for each_table in tables:
-            con.execute(f"""
-                CREATE OR REPLACE TABLE {each_table} AS
-                SELECT DISTINCT * FROM {each_table};
-            """)
-            logger.info(f"{each_table}: removed duplicate values")
-
+        exists = con.execute("""
+            SELECT COUNT(*) FROM information_schema.tables
+            WHERE table_schema = 'main' AND table_name = 'vehicle_emissions'
+        """).fetchone()[0]
+        if not exists:
+            logger.warning("vehicle_emissions table not found; skipping dedupe.")
+            return False
 
         table_name = "vehicle_emissions"
+        temp = f"{table_name}_rmduplicates"
+        con.execute(f"""BEGIN TRANSACTION;""")
         con.execute(f"""
-            CREATE OR REPLACE TABLE {table_name} AS
+            CREATE OR REPLACE TABLE {temp} AS
             SELECT DISTINCT * FROM {table_name};
         """)
+        con.execute(f"DROP TABLE {table_name};")
+        con.execute(f"ALTER TABLE {temp} RENAME TO {table_name};")
+        con.execute(f"""COMMIT;""")
         logger.info(f"{table_name}: removed duplicate values in vehicle_emissions")
+        return table_name
 
     except Exception as e:
-        print(f"An error occurred for yellow green taxi parquet loading: {e}")
-        logger.error(f"An error occurred yellow green taxi parquet or vehicle_emission loading: {e}")
+        print(f"An error occurred for removing duplicates from vehicle_emisisons: {e}")
+        logger.error(f"An error occurred for removing duplicates from vehicle_emisisons: {e}")
+
+        try: 
+            con.execute("ROLLBACK;")
+        except Exception: 
+            pass
+        try: 
+            con.execute(f"DROP TABLE IF EXISTS {temp};")
+        except Exception: 
+            pass
+
+        return None
 
     finally:
         if con:
@@ -386,20 +472,20 @@ if __name__ == "__main__":
     years = range(2023, 2025) # testing
     tables = get_yellow_green_tables(years)
 
-    # remove duplicates
-    remove_duplicates(tables)
+    # remove duplicates vehicle_emissions (yellow green is in get_yellow_green_tables)
+    remove_duplicates_vehicle_emissions()
 
-    # # remove trips with 0 passengers
-    zero_passengers_removed(tables)
+    # remove trips with 0 passengers
+    # zero_passengers_removed(tables)
 
-    # remove trips 0 miles in length
-    zero_miles_removed(tables)
+    # # remove trips 0 miles in length
+    # zero_miles_removed(tables)
 
-    # remove trips greater than 100 miles in length
-    more_100mi_removed(tables)
+    # # remove trips greater than 100 miles in length
+    # more_100mi_removed(tables)
 
-    # remove trips greater than 24 hours in length
-    more_24hr_removed(tables)
+    # # remove trips greater than 24 hours in length
+    # more_24hr_removed(tables)
 
-    # include tests - all methods above !
-    tests(tables)
+    # # include tests - all methods above !
+    # tests(tables)
