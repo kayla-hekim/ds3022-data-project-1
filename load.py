@@ -32,6 +32,7 @@ def load_parquet_files(years=range(2024, 2025)):
             table_name = f"{color}_{year}"
             con.execute(f"DROP TABLE IF EXISTS {table_name};")
             con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM read_parquet('https://d37ci6vzurychx.cloudfront.net/trip-data/{color}_tripdata_{year}-01.parquet', union_by_name=true);")
+            logger.info(f"Dropped if exists and created table {table_name} for month 01 in emissions db")
 
             for month in range(2,13):
                 input_file = f"https://d37ci6vzurychx.cloudfront.net/trip-data/{color}_tripdata_{year}-{month:02d}.parquet"
@@ -43,7 +44,7 @@ def load_parquet_files(years=range(2024, 2025)):
                         SELECT * FROM read_parquet('{input_file}', union_by_name=true);
                     """)
 
-                    logger.info(f"Dropped if exists and created table {table_name} in emissions db")
+                    logger.info(f"Dropped if exists and created table {table_name} for month {month:02d} in emissions db")
                     # time.sleep(60)
                 except Exception as e:
                     logger.warning(f"Skipping {input_file} due to error: {e}")
@@ -55,6 +56,8 @@ def load_parquet_files(years=range(2024, 2025)):
             table_name = f"{color}_{year}"
             con.execute(f"DROP TABLE IF EXISTS {table_name};")
             con.execute(f"CREATE TABLE {table_name} AS SELECT * FROM read_parquet('https://d37ci6vzurychx.cloudfront.net/trip-data/{color}_tripdata_{year}-01.parquet', union_by_name=true);")
+            logger.info(f"Dropped if exists and created table {table_name} for month 01 in emissions db")
+
 
             for month in range(2,13):
                 input_file = f"https://d37ci6vzurychx.cloudfront.net/trip-data/{color}_tripdata_{year}-{month:02d}.parquet"
@@ -65,7 +68,7 @@ def load_parquet_files(years=range(2024, 2025)):
                         INSERT INTO {table_name}
                         SELECT * FROM read_parquet('{input_file}', union_by_name=true);
                     """)
-                    logger.info(f"Dropped if exists and created table {table_name} in emissions db")
+                    logger.info(f"Dropped if exists and created table {table_name} for month {month:02d} in emissions db")
                     # time.sleep(60)
                 except Exception as e:
                     logger.warning(f"Skipping {input_file} due to error: {e}")
@@ -73,13 +76,6 @@ def load_parquet_files(years=range(2024, 2025)):
 
         # con.execute("VACUUM;") # had issues with disc space - research said this would help?
         # logger.info("VACUUM completed")
-
-        # check counts of tables yellow green
-        for t in [f"yellow_{year}", f"green_{year}"]:
-            n = con.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
-            print(f"{t} rows: {n}")
-            logger.info(f"{t} rows: {n}")
-
 
     except Exception as e:
         # print(f"An error occurred for yellow green taxi parquet loading: {e}")
@@ -93,7 +89,7 @@ def load_parquet_files(years=range(2024, 2025)):
 
 # Loading vehicle_emissions.csv into emissions db
 def load_vehicle_emissions_csv(file_name):
-    con = None
+    con = Nones
     table_name = "vehicle_emissions"
 
     try:
@@ -135,41 +131,29 @@ def basic_data_summarizations(years=range(2024, 2025)):
 
 
     # SUMMING ROW AMOUNTS FROM YELLOW THEN GREEN TABLES
-        existing_tables = {row[0] for row in con.execute("SHOW TABLES").fetchall()}
-        
-        # yellow sum
+        # check counts of tables yellow green
         total_yellow = 0
-        for year in years:
-            # keeping existing tables in existing_tables, else skip - yellow
-            tables = [f"yellow_{year}_{m:02d}" for m in range(1, 13)]
-            tables = [t for t in tables if t in existing_tables] 
-            if not tables:
-                logger.warning(f"No yellow tables found for {year}; skipping.")
-                continue
-            else:
-                union_sql_yellow = " UNION ALL ".join([f"SELECT COUNT(*) AS count FROM {t}" for t in tables])
-                query = f"SELECT COALESCE(SUM(count), 0) FROM ({union_sql_yellow})"
-                yellow_sum = con.execute(query).fetchone()[0]
-                total_yellow += yellow_sum
-                logger.info(f"summing count from yellow tables in {year}: {yellow_sum}")
-
-        # green sum
         total_green = 0
         for year in years:
-            # keeping existing tables in existing_tables, else skip - green
-            tables = [f"green_{year}_{m:02d}" for m in range(1, 13)]
-            tables = [t for t in tables if t in existing_tables] 
-            if not tables:
-                logger.warning(f"No green tables found for {year}; skipping.")
-                continue
-            else:
-                union_sql_green = " UNION ALL ".join([f"SELECT COUNT(*) AS count FROM {t}" for t in tables])
-                query = f"SELECT COALESCE(SUM(count), 0) FROM ({union_sql_green})"
-                green_sum = con.execute(query).fetchone()[0]
-                total_green += green_sum
-                logger.info(f"summing count from green tables in {year}: {green_sum}")
+            table = f"yellow_{year}"
+            try:
+                year_num = con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            except Exception as e:
+                year_num = 0
+                logger.warning(f"{table} missing or unreadable in yellow sum: {e}")
+            total_yellow += year_num
+            logger.info(f"{table} rows: {year_num}")
 
-        # logging sums and printing
+        for year in years:
+            table = f"green_{year}"
+            try:
+                year_num = con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            except Exception as e:
+                year_num = 0
+                logger.warning(f"{table} missing or unreadable in green sum: {e}")
+            total_green += year_num
+            logger.info(f"{table} rows: {year_num}")
+
         print(f"Total yellow trips (all years): {total_yellow}")
         print(f"Total green trips (all years): {total_green}")
         logger.info(f"Total yellow trips (all years): {total_yellow}")
@@ -180,66 +164,70 @@ def basic_data_summarizations(years=range(2024, 2025)):
 
 
     # AVERAGE TRIP DISTANCE PER TABLE, THEN ALL TOGETHER
-        overall_yellow_avg = 0.0 # by months out of all years together
+        sum_distance_yellow_all = 0.0 # by months out of all years together
+        sum_rows_yellow_all = 0
         averages_per_year_yellow = {}
-
-        all_yellow_tables = []
-        for year in years:
-            tables = [f"yellow_{year}_{m:02d}" for m in range(1, 13)]
-            tables = [t for t in tables if t in existing_tables]
-            if not tables:
-                logger.warning(f"No yellow tables found for {year}; skipping.")
-                continue
-            else:
-                union_sql = " UNION ALL ".join([f"SELECT SUM(trip_distance) AS sum_dist, COUNT(*) AS nrows FROM {t}" for t in tables])
-                year_avg = con.execute(
-                    f"SELECT COALESCE(SUM(sum_dist)/NULLIF(SUM(nrows),0), 0) FROM ({union_sql})"
-                ).fetchone()[0]
-                averages_per_year_yellow[year] = year_avg
-                all_yellow_tables.extend(tables)
-                logger.info(f"obtained average for yellow year {year}")
-
-
-        if all_yellow_tables:
-            union_sql = " UNION ALL ".join([f"SELECT SUM(trip_distance) AS sum_dist, COUNT(*) AS nrows FROM {t}" for t in all_yellow_tables])
-            overall_yellow_avg = con.execute(
-                f"SELECT COALESCE(SUM(sum_dist)/NULLIF(SUM(nrows),0), 0) FROM ({union_sql})"
-            ).fetchone()[0]
-            logger.info(f"obtained average for all yellows")
-
         
-        overall_green_avg = 0.0 # by months out of all years together
+        # avg by yellow
+        for year in years:
+            table = f"yellow_{year}"
+            try:
+                sum_distance, num_rows = con.execute(f"""
+                    SELECT COALESCE(SUM(trip_distance),0)::DOUBLE, COUNT(*)
+                    FROM {table}
+                """).fetchone()
+            except Exception as e:
+                sum_distance, num_rows = 0.0, 0
+                logger.warning(f"{table} missing or unreadable in yellow avg dist: {e}")
+            
+            if num_rows:
+                year_avg = (sum_distance / num_rows)
+            else:
+                year_avg = 0.0
+            averages_per_year_yellow[year] = year_avg
+            sum_distance_yellow_all += sum_distance
+            sum_rows_yellow_all += num_rows
+            logger.info(f"obtained average for {table}")
+
+        overall_yellow_avg = 0.0
+        if sum_rows_yellow_all:
+            overall_yellow_avg = (sum_distance_yellow_all / sum_rows_yellow_all) 
+
+
+        sum_distance_green_all = 0.0
+        sum_rows_green_all = 0
         averages_per_year_green = {}
 
-        all_green_tables = []
         for year in years:
-            tables = [f"green_{year}_{m:02d}" for m in range(1, 13)]
-            tables = [t for t in tables if t in existing_tables]
-            if not tables:
-                logger.warning(f"No green tables found for {year}; skipping.")
-                continue
+            table = f"green_{year}"
+            try:
+                sum_distance, num_rows = con.execute(f"""
+                    SELECT COALESCE(SUM(trip_distance),0)::DOUBLE, COUNT(*)
+                    FROM {table}
+                """).fetchone()
+            except Exception as e:
+                sum_distance, num_rows = 0.0, 0
+                logger.warning(f"{table} missing or unreadable in green avg dist: {e}")
+            
+            if num_rows:
+                year_avg = (sum_distance / num_rows)
             else:
-                union_sql = " UNION ALL ".join([f"SELECT SUM(trip_distance) AS sum_dist, COUNT(*) AS nrows FROM {t}" for t in tables])
-                year_avg = con.execute(
-                    f"SELECT COALESCE(SUM(sum_dist)/NULLIF(SUM(nrows),0), 0) FROM ({union_sql})"
-                ).fetchone()[0]
-                averages_per_year_green[year] = year_avg
-                all_green_tables.extend(tables)
-                logger.info(f"obtained average for green year {year}")
+                year_avg = 0.0
+            averages_per_year_green[year] = year_avg
+            sum_distance_green_all += sum_distance
+            sum_rows_green_all += num_rows
+            logger.info(f"obtained average for {table}")
 
-
-        if all_green_tables:
-            union_sql = " UNION ALL ".join([f"SELECT SUM(trip_distance) AS sum_dist, COUNT(*) AS nrows FROM {t}" for t in all_green_tables])
-            overall_green_avg = con.execute(
-                f"SELECT COALESCE(SUM(sum_dist)/NULLIF(SUM(nrows),0), 0) FROM ({union_sql})"
-            ).fetchone()[0]
-            logger.info(f"obtained average for all greens")
-
+        overall_green_avg = 0.0
+        if sum_rows_green_all:
+            overall_green_avg = (sum_distance_green_all / sum_rows_green_all)
         
+
         print(f"total average for all yellow tables: {overall_yellow_avg}")
         print(f"total average for all green tables: {overall_green_avg}")
         logger.info(f"total average for all yellow tables: {overall_yellow_avg}")
         logger.info(f"total average for all green tables: {overall_green_avg}")
+
 
         print("\n")
 
