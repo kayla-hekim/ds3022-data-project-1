@@ -33,6 +33,7 @@ mph_calc AS (
 time_features AS (
     SELECT
         mph_calc.*, -- mph per trip (above)
+        EXTRACT(YEAR FROM pickup_ts) AS trip_year, -- for using year later
         EXTRACT(HOUR FROM pickup_ts) AS hour_of_day, -- calculate trip hour
         STRFTIME(pickup_ts, '%A')    AS day_of_week, -- calculate trip day of week
         CAST(STRFTIME(CAST(pickup_ts AS DATE), '%V') AS INT) AS week_of_year, -- calculate week number
@@ -40,6 +41,7 @@ time_features AS (
         CASE lower(taxi_color)
             WHEN 'yellow_taxi' THEN 'yellow_taxi'
             WHEN 'green_taxi'  THEN 'green_taxi'
+            ELSE NULL
         END AS vehicle_type -- use in co2_factors in with_co2_factors
     FROM mph_calc
 ),
@@ -71,6 +73,7 @@ SELECT
     trip_distance_mi,
     passenger_count,
     
+    trip_year,
     hour_of_day,
     day_of_week,
     week_of_year,

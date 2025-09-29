@@ -70,7 +70,7 @@ def run_dbt():
 
 # Call all methods from transform.py here
 if __name__ == "__main__":
-    run_dbt()
+    run_dbt() # runs "dbt build -s +data_transformation --profiles-dir ."
 
     # testing transform worked
     # qa_print()

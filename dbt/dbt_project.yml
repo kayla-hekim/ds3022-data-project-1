@@ -20,6 +20,4 @@ models:
     staging:
       +materialized: table
     transforms:
-      +materialized: table
-    # marts:
-    #   +materialized: table    
+      +materialized: table 
