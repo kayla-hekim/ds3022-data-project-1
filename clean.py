@@ -114,6 +114,7 @@ def drop_columns_green(con, table):
         return None
     
 
+# removing duplicates for either yellow or green, depending on what's passed as `table`
 def remove_duplicates_yellow_green(con, table):
     temp = f"{table}_rmduplicates"
     try:
@@ -323,7 +324,7 @@ def more_100mi_removed(tables):
             con.close()
 
 
-# helper method for 24 hr rides
+# helper method for 24 hr rides - getting either pickup or drop off since yellow and green are different in this
 def get_datetime_cols(con, table):
     # Grab column names for the table
     cols = [r[1] for r in con.execute(f"PRAGMA table_info('{table}')").fetchall()]

@@ -12,7 +12,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-
+# obtaining single largest carbon trip (all fields of the trip) out of 2015-2024 or respective year range
 def single_largest_carbon_trip_year(color, years=range(2024, 2025), db_path='./emissions.duckdb'):
     con = None
 
@@ -114,6 +114,7 @@ def single_largest_carbon_trip_year(color, years=range(2024, 2025), db_path='./e
         if con:
             con.close()
 
+# printing the above largest carbon trip out of all years yellow and for green in pretty way with bullet points
 def pretty_print_largest_carbon_trip(color, largest_carbon, years=range(2024, 2025)):
     start_year = min(years)
     end_year = max(years)
@@ -132,6 +133,7 @@ def pretty_print_largest_carbon_trip(color, largest_carbon, years=range(2024, 20
 
 
 
+# obtaining heaviest and lightest carbon hours ou tof the year range 2015-2024, or whatever is input
 def carbon_heavy_light_hour (years=range(2024, 2025), db_path='./emissions.duckdb'):
     con = None
 
@@ -194,6 +196,7 @@ def carbon_heavy_light_hour (years=range(2024, 2025), db_path='./emissions.duckd
 
 
 
+# obtaining the heaviest and lightest carbon day of week (Mon to Sun) in respective year range
 def carbon_heavy_light_DOW (years=range(2024, 2025), db_path='./emissions.duckdb'):
     con = None
 
@@ -293,6 +296,7 @@ def carbon_heavy_light_DOW (years=range(2024, 2025), db_path='./emissions.duckdb
 
 
 
+# obtaining the heaviest and lightest carbon week (1-52, not 1-2015, 1-2016, etc.) in respective year range
 def carbon_heavy_light_week (years=range(2024, 2025), db_path='./emissions.duckdb'):
     con = None
 
@@ -356,6 +360,7 @@ def carbon_heavy_light_week (years=range(2024, 2025), db_path='./emissions.duckd
 
 
 
+# obtaining the heaviest and lightest carbon day of month (1-12, not jan-2015, jan-2016, etc.) in respective year range
 def carbon_heavy_light_month (years=range(2024, 2025), db_path='./emissions.duckdb'):
     con = None
 
@@ -477,6 +482,7 @@ def carbon_heavy_light_month (years=range(2024, 2025), db_path='./emissions.duck
 
 
 
+# plotting co2 sum totals of all years' months for all years - x axis from 2015-2024 (or respective timeframe), y-axis is summation of co2 in kgs
 def plot_co2_month_by_co2totals(years=range(2024, 2025), db_path='./emissions.duckdb'):
     con = None
 
@@ -557,7 +563,9 @@ def plot_co2_month_by_co2totals(years=range(2024, 2025), db_path='./emissions.du
         fig.savefig('./month_co2totals_yellow_green.png', dpi=150)
         plt.close(fig)
 
-
+        
+        # THIS IS IF YOU WANT THE PLOT ON THE SAME PLOT, ELSE PUT THEM DIFFERENTLY 
+        # SINCE YELLOW TRIPS HAVE HIGHER NUMBERS AND CO2 SUMS THAN THAT OF GREEN
         # plt.figure(figsize=(10, 8), dpi=150)
 
         # years_list = list(range(start_year, end_year))
