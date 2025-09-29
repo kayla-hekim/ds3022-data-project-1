@@ -13,95 +13,96 @@ logger = logging.getLogger(__name__)
 
 
 
-def single_largest_carbon_trip_year(color, years=range(2024, 2025), db_path='./emissions.duckdb'):
+def single_largest_carbon_trip_year(color, years=range(2024, 2025), db_path='./emissions2024.duckdb'):
     con = None
 
     try:
         con = duckdb.connect(database=db_path, read_only=True)
         logger.info(f"Connected to DuckDB for largest CO2 trip: color={color}, years={list(years)}")
 
-        largest_trip = {}
+        largest_trip = ""
+        largest_co2 = -1.0
         color_lower = color.lower()
+
         start_year = min(years)
         end_year = max(years) + 1
-        sql_query = ""
 
-        if color_lower.lower() == 'yellow':
-            sql_query = f"""
-                SELECT
-                    pickup_ts,
-                    dropoff_ts,
-                    trip_distance_mi,
-                    passenger_count,
-                    trip_year,
-                    hour_of_day,
-                    day_of_week,
-                    week_of_year,
-                    month_of_year,
-                    avg_mph,
-                    trip_co2_kgs,
-                    vehicle_type
-                FROM data_transformation
-                WHERE vehicle_type = 'yellow_taxi'
-                    AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
-                    AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
-                    AND trip_co2_kgs IS NOT NULL
-                ORDER BY trip_co2_kgs DESC, trip_distance_mi DESC, dropoff_ts ASC
-                LIMIT 1
-            """
+        for year in years:
+            table_name = f"{color_lower}_{year}"
+
+            if color_lower.lower() == 'yellow':
+                sql_query = f"""
+                    SELECT
+                        pickup_ts,
+                        dropoff_ts,
+                        trip_distance_mi,
+                        passenger_count,
+                        hour_of_day,
+                        day_of_week,
+                        week_of_year,
+                        month_of_year,
+                        avg_mph,
+                        trip_co2_kgs,
+                        vehicle_type
+                    FROM data_transformation
+                    WHERE vehicle_type = '{color_lower}_taxi'
+                        AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
+                        AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
+                        AND trip_co2_kgs IS NOT NULL
+                    ORDER BY trip_co2_kgs DESC, trip_distance_mi DESC, dropoff_ts ASC
+                    LIMIT 1
+                """
             
-        elif color_lower == 'green':
-            sql_query = f"""
-                SELECT
-                    pickup_ts,
-                    dropoff_ts,
-                    trip_distance_mi,
-                    passenger_count,
-                    trip_year,
-                    hour_of_day,
-                    day_of_week,
-                    week_of_year,
-                    month_of_year,
-                    avg_mph,
-                    trip_co2_kgs,
-                    vehicle_type
-                FROM data_transformation
-                WHERE vehicle_type = 'green_taxi'
-                    AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
-                    AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
-                    AND trip_co2_kgs IS NOT NULL
-                ORDER BY trip_co2_kgs DESC, trip_distance_mi DESC, dropoff_ts ASC
-                LIMIT 1
-            """
+            elif color_lower == 'green':
+                sql_query = f"""
+                    SELECT
+                        pickup_ts,
+                        dropoff_ts,
+                        trip_distance_mi,
+                        passenger_count,
+                        hour_of_day,
+                        day_of_week,
+                        week_of_year,
+                        month_of_year,
+                        avg_mph,
+                        trip_co2_kgs,
+                        vehicle_type
+                    FROM data_transformation
+                    WHERE vehicle_type = '{color_lower}_taxi'
+                        AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
+                        AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
+                        AND trip_co2_kgs IS NOT NULL
+                    ORDER BY trip_co2_kgs DESC, trip_distance_mi DESC, dropoff_ts ASC
+                    LIMIT 1
+                """
 
-        if not sql_query:
-            print("no table found to reference or pull data")
-            logger.error("no table found to reference or pull data")
-            return None
+            else:
+                continue
 
-        try:
-            row = con.execute(sql_query).fetchone()
-        except Exception as e:
-            logger.warning(f"can't find table")
-            return None
-        
-        if row:
-            trip_co2 = row[10]
-            if trip_co2 is not None:
-                largest_trip = {
-                    "pickup_ts": row[0],
-                    "dropoff_ts": row[1],
-                    "trip_distance_mi": row[2],
-                    "passenger_count": row[3],
-                    "trip_year": row[4],
-                    "hour_of_day": row[5],
-                    "day_of_week": row[6],
-                    "week_of_year": row[7],
-                    "month_of_year": row[8],
-                    "avg_mph": row[9],
-                    "trip_co2_kgs": row[10],
-                    "vehicle_type": row[11],
-                }
+            try:
+                row = con.execute(sql_query).fetchone()
+            except Exception as e:
+                logger.warning(f"Skipping {table_name}: {e}")
+                continue
+
+            if row:
+                trip_co2 = row[9]
+                if trip_co2 is not None and trip_co2 > largest_co2:
+                    largest_co2 = trip_co2
+                    largest_trip = {
+                        "pickup_ts": row[0],
+                        "dropoff_ts": row[1],
+                        "trip_distance_mi": row[2],
+                        "passenger_count": row[3],
+                        "hour_of_day": row[4],
+                        "day_of_week": row[5],
+                        "week_of_year": row[6],
+                        "month_of_year": row[7],
+                        "avg_mph": row[8],
+                        "trip_co2_kgs": row[9],
+                        "vehicle_type": row[10],
+                        "year": year,
+                    }
 
         return largest_trip
 
@@ -132,7 +133,7 @@ def pretty_print_largest_carbon_trip(color, largest_carbon, years=range(2024, 20
 
 
 
-def carbon_heavy_light_hour (years=range(2024, 2025), db_path='./emissions.duckdb'):
+def carbon_heavy_light_hour (years=range(2024, 2025), db_path='./emissions2024.duckdb'):
     con = None
 
     try:
@@ -194,15 +195,12 @@ def carbon_heavy_light_hour (years=range(2024, 2025), db_path='./emissions.duckd
 
 
 
-def carbon_heavy_light_DOW (years=range(2024, 2025), db_path='./emissions.duckdb'):
+def carbon_heavy_light_DOW (years=range(2024, 2025), db_path='./emissions2024.duckdb'):
     con = None
 
     try:
         con = duckdb.connect(database=db_path, read_only=True)
         logger.info(f"Connected to DuckDB for heavy and light carbon DOW: years={list(years)}")
-
-        start_year = min(years)
-        end_year = max(years) + 1
 
         result_yellow = None
         result_green = None
@@ -222,9 +220,6 @@ def carbon_heavy_light_DOW (years=range(2024, 2025), db_path='./emissions.duckdb
                 AVG(trip_co2_kgs) AS avg_co2_per_trip
             FROM data_transformation
             WHERE vehicle_type = 'yellow_taxi'
-                AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
-                AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
-                AND trip_co2_kgs IS NOT NULL
             GROUP BY 1
             ORDER BY CASE
                 WHEN dow_abbrev='Sun' THEN 1
@@ -252,9 +247,6 @@ def carbon_heavy_light_DOW (years=range(2024, 2025), db_path='./emissions.duckdb
                 AVG(trip_co2_kgs) AS avg_co2_per_trip
             FROM data_transformation
             WHERE vehicle_type = 'green_taxi'
-                AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
-                AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
-                AND trip_co2_kgs IS NOT NULL
             GROUP BY 1
             ORDER BY CASE
                 WHEN dow_abbrev='Sun' THEN 1
@@ -270,9 +262,6 @@ def carbon_heavy_light_DOW (years=range(2024, 2025), db_path='./emissions.duckdb
         if not result_yellow or not result_green:
             logger.warning("One of the color result sets is empty.")
             return None
-        
-        if len(result_yellow) < 7 or len(result_green) < 7:
-            logger.warning("Some days are missing in results.")
 
         yellow_DOW_min = min(result_yellow, key=lambda x: x[1])
         yellow_DOW_max = max(result_yellow, key=lambda x: x[1])
@@ -293,7 +282,7 @@ def carbon_heavy_light_DOW (years=range(2024, 2025), db_path='./emissions.duckdb
 
 
 
-def carbon_heavy_light_week (years=range(2024, 2025), db_path='./emissions.duckdb'):
+def carbon_heavy_light_week (years=range(2024, 2025), db_path='./emissions2024.duckdb'):
     con = None
 
     try:
@@ -354,7 +343,7 @@ def carbon_heavy_light_week (years=range(2024, 2025), db_path='./emissions.duckd
 
 
 
-def carbon_heavy_light_month (years=range(2024, 2025), db_path='./emissions.duckdb'):
+def carbon_heavy_light_month (years=range(2024, 2025), db_path='./emissions2024.duckdb'):
     con = None
 
     try:
@@ -389,7 +378,6 @@ def carbon_heavy_light_month (years=range(2024, 2025), db_path='./emissions.duck
                 AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
                 AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
                 AND trip_co2_kgs IS NOT NULL
-                AND month_of_year BETWEEN 1 AND 12
             GROUP BY mo_abbrev
             ORDER BY CASE
                 WHEN mo_abbrev='Jan' THEN 1
@@ -430,7 +418,6 @@ def carbon_heavy_light_month (years=range(2024, 2025), db_path='./emissions.duck
                 AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
                 AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
                 AND trip_co2_kgs IS NOT NULL
-                AND month_of_year BETWEEN 1 AND 12
             GROUP BY mo_abbrev
             ORDER BY CASE
                 WHEN mo_abbrev='Jan' THEN 1
@@ -452,9 +439,6 @@ def carbon_heavy_light_month (years=range(2024, 2025), db_path='./emissions.duck
         if not result_yellow or not result_green:
             logger.warning("One of the color result sets is empty.")
             return None
-
-        if len(result_yellow) < 12 or len(result_green) < 12:
-            logger.warning("Some months are missing in results.")
 
         yellow_mo_min = min(result_yellow, key=lambda x: x[1])
         yellow_mo_max = max(result_yellow, key=lambda x: x[1])
@@ -599,8 +583,7 @@ def plot_co2_month_by_co2totals(years=range(2024, 2025), db_path='./emissions202
 
 # Call all methods from analysis.py here
 if __name__ == "__main__":
-    years = range(2023, 2025) # testing
-    # years = range(2015, 2025)
+    years = range(2024, 2025)
 
     # SINGLE LARGEST CARBON TRIP OF THE YEARS - YELLOW THEN GREEN:
     print("1. Single largest carbon trip of year(s):\n")
@@ -617,57 +600,41 @@ if __name__ == "__main__":
     # MIN AND MAX CARBON HOURS (AVERAGES) - YELLOW THEN GREEN:
     print("2. Carbon heavy and light hours for rides, yellow then green:")
     results_hours = carbon_heavy_light_hour(years)
-    if not results_hours:
-        print("no CO2 for hours results given")
-        logger.warning("no CO2 for hours results given")
-    else:
-        yellow_hour_min, yellow_hour_max, green_hour_min, green_hour_max = results_hours
-        print(f"yellow carbon hour min: (hour {yellow_hour_min[0]}, {yellow_hour_min[1]:.5f} kg CO2 per trip), \nyellow carbon hour max: (hour {yellow_hour_max[0]}, {yellow_hour_max[1]:.5f} kg CO2 per trip)\n")
-        logger.info(f"yellow carbon hour min: (hour {yellow_hour_min[0]}, {yellow_hour_min[1]:.5f} kg CO2 per trip), \nyellow carbon hour max: (hour {yellow_hour_max[0]}, {yellow_hour_max[1]:.5f} kg CO2 per trip)\n")
-        print(f"green carbon hour min: (hour {green_hour_min[0]}, {green_hour_min[1]:.5f} kg CO2 per trip), \ngreen carbon hour max: (hour {green_hour_max[0]}, {green_hour_max[1]:.5f} kg CO2 per trip)\n")
-        logger.info(f"green carbon hour min: (hour {green_hour_min[0]}, {green_hour_min[1]:.5f} kg CO2 per trip), \ngreen carbon hour max: (hour {green_hour_max[0]}, {green_hour_max[1]:.5f} kg CO2 per trip)\n")
+    yellow_hour_min, yellow_hour_max, green_hour_min, green_hour_max = results_hours
+    print(f"yellow carbon hour min: (hour {yellow_hour_min[0]}, {yellow_hour_min[1]:.5f} kg CO2 per trip), \nyellow carbon hour max: (hour {yellow_hour_max[0]}, {yellow_hour_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"yellow carbon hour min: (hour {yellow_hour_min[0]}, {yellow_hour_min[1]:.5f} kg CO2 per trip), \nyellow carbon hour max: (hour {yellow_hour_max[0]}, {yellow_hour_max[1]:.5f} kg CO2 per trip)\n")
+    print(f"green carbon hour min: (hour {green_hour_min[0]}, {green_hour_min[1]:.5f} kg CO2 per trip), \ngreen carbon hour max: (hour {green_hour_max[0]}, {green_hour_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"green carbon hour min: (hour {green_hour_min[0]}, {green_hour_min[1]:.5f} kg CO2 per trip), \ngreen carbon hour max: (hour {green_hour_max[0]}, {green_hour_max[1]:.5f} kg CO2 per trip)\n")
     print("\n")
 
     # MIN AND MAX CARBON DOW (AVERAGES) - YELLOW THEN GREEN:
     print("3. Carbon heavy and light days of week for rides, yellow then green:")
     results_DOW = carbon_heavy_light_DOW(years)
-    if not results_DOW:
-        print("no CO2 for DOW results given")
-        logger.warning("no CO2 for DOW results given")
-    else:
-        yellow_DOW_min, yellow_DOW_max, green_DOW_min, green_DOW_max = results_DOW
-        print(f"yellow carbon DOW min: ({yellow_DOW_min[0]}, {yellow_DOW_min[1]:.5f} kg CO2 per trip), \nyellow carbon DOW max: ({yellow_DOW_max[0]}, {yellow_DOW_max[1]:.5f} kg CO2 per trip)\n")
-        logger.info(f"yellow carbon DOW min: ({yellow_DOW_min[0]}, {yellow_DOW_min[1]:.5f} kg CO2 per trip), \nyellow carbon DOW max: ({yellow_DOW_max[0]}, {yellow_DOW_max[1]:.5f} kg CO2 per trip)\n")
-        print(f"green carbon DOW min: ({green_DOW_min[0]}, {green_DOW_min[1]:.5f} kg CO2 per trip), \ngreen carbon DOW max: ({green_DOW_max[0]}, {green_DOW_max[1]:.5f} kg CO2 per trip)\n")
-        logger.info(f"green carbon DOW min: ({green_DOW_min[0]}, {green_DOW_min[1]:.5f} kg CO2 per trip), \ngreen carbon DOW max: ({green_DOW_max[0]}, {green_DOW_max[1]:.5f} kg CO2 per trip)\n")
+    yellow_DOW_min, yellow_DOW_max, green_DOW_min, green_DOW_max = results_DOW
+    print(f"yellow carbon DOW min: ({yellow_DOW_min[0]}, {yellow_DOW_min[1]:.5f} kg CO2 per trip), \nyellow carbon DOW max: ({yellow_DOW_max[0]}, {yellow_DOW_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"yellow carbon DOW min: ({yellow_DOW_min[0]}, {yellow_DOW_min[1]:.5f} kg CO2 per trip), \nyellow carbon DOW max: ({yellow_DOW_max[0]}, {yellow_DOW_max[1]:.5f} kg CO2 per trip)\n")
+    print(f"green carbon DOW min: ({green_DOW_min[0]}, {green_DOW_min[1]:.5f} kg CO2 per trip), \ngreen carbon DOW max: ({green_DOW_max[0]}, {green_DOW_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"green carbon DOW min: ({green_DOW_min[0]}, {green_DOW_min[1]:.5f} kg CO2 per trip), \ngreen carbon DOW max: ({green_DOW_max[0]}, {green_DOW_max[1]:.5f} kg CO2 per trip)\n")
     print("\n")
 
     # MIN AND MAX CARBON WEEKS (AVERAGES) - YELLOW THEN GREEN:
     print("4. Carbon heavy and light weeks of years for rides, yellow then green:")
     results_weeks = carbon_heavy_light_week(years)
-    if not results_weeks:
-        print("no CO2 for weeks results given")
-        logger.warning("no CO2 for weeks results given")
-    else:
-        yellow_week_min, yellow_week_max, green_week_min, green_week_max = results_weeks
-        print(f"yellow carbon week min: (week {yellow_week_min[0]},  {yellow_week_min[1]:.5f} kg CO2 per trip), \nyellow carbon week max: (week {yellow_week_max[0]},  {yellow_week_max[1]:.5f} kg CO2 per trip)\n")
-        logger.info(f"yellow carbon week min: (week {yellow_week_min[0]},  {yellow_week_min[1]:.5f} kg CO2 per trip), \nyellow carbon week max: (week {yellow_week_max[0]},  {yellow_week_max[1]:.5f} kg CO2 per trip)\n")
-        print(f"green carbon week min: (week {green_week_min[0]},  {green_week_min[1]:.5f} kg CO2 per trip), \ngreen carbon week max: (week {green_week_max[0]},  {green_week_max[1]:.5f} kg CO2 per trip)\n")
-        logger.info(f"green carbon week min: (week {green_week_min[0]},  {green_week_min[1]:.5f} kg CO2 per trip), \ngreen carbon week max: (week {green_week_max[0]},  {green_week_max[1]:.5f} kg CO2 per trip)\n")
+    yellow_week_min, yellow_week_max, green_week_min, green_week_max = results_weeks
+    print(f"yellow carbon week min: (week {yellow_week_min[0]},  {yellow_week_min[1]:.5f} kg CO2 per trip), \nyellow carbon week max: (week {yellow_week_max[0]},  {yellow_week_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"yellow carbon week min: (week {yellow_week_min[0]},  {yellow_week_min[1]:.5f} kg CO2 per trip), \nyellow carbon week max: (week {yellow_week_max[0]},  {yellow_week_max[1]:.5f} kg CO2 per trip)\n")
+    print(f"green carbon week min: (week {green_week_min[0]},  {green_week_min[1]:.5f} kg CO2 per trip), \ngreen carbon week max: (week {green_week_max[0]},  {green_week_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"green carbon week min: (week {green_week_min[0]},  {green_week_min[1]:.5f} kg CO2 per trip), \ngreen carbon week max: (week {green_week_max[0]},  {green_week_max[1]:.5f} kg CO2 per trip)\n")
     print("\n")
 
     # MIN AND MAX CARBON MONTHS (AVERAGES) - YELLOW THEN GREEN:
     print("5. Carbon heavy and light months of years for rides, yellow then green:")
     results_months = carbon_heavy_light_month(years)
-    if not results_months:
-        print("no CO2 for months results given")
-        logger.warning("no CO2 for months results given")
-    else:
-        yellow_mo_min, yellow_mo_max, green_mo_min, green_mo_max = results_months
-        print(f"yellow carbon month min: (month {yellow_mo_min[0]},  {yellow_mo_min[1]:.5f} kg CO2 per trip), \nyellow carbon month max: (month {yellow_mo_max[0]},  {yellow_mo_max[1]:.5f} kg CO2 per trip)\n")
-        logger.info(f"yellow carbon month min: (month {yellow_mo_min[0]},  {yellow_mo_min[1]:.5f} kg CO2 per trip), \nyellow carbon month max: (month {yellow_mo_max[0]},  {yellow_mo_max[1]:.5f} kg CO2 per trip)\n")
-        print(f"green carbon month min: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
-        logger.info(f"green carbon month min: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
+    yellow_mo_min, yellow_mo_max, green_mo_min, green_mo_max = results_months
+    print(f"yellow carbon month min: (month {yellow_mo_min[0]},  {yellow_mo_min[1]:.5f} kg CO2 per trip), \nyellow carbon month max: (month {yellow_mo_max[0]},  {yellow_mo_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"yellow carbon month min: (month {yellow_mo_min[0]},  {yellow_mo_min[1]:.5f} kg CO2 per trip), \nyellow carbon month max: (month {yellow_mo_max[0]},  {yellow_mo_max[1]:.5f} kg CO2 per trip)\n")
+    print(f"green carbon month min: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
+    logger.info(f"green carbon month min: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
     print("\n")
     
     # PLOTTING FOR MONTH BY CO2 (Matplotlib.pyplot)
