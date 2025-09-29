@@ -18,19 +18,19 @@ def get_yellow_green_tables(years=(2024, 2025)):
     try:
         for year in years:
             table = f"yellow_{year}"
-            table = remove_duplicates_yellow_green(con, table)
+            table = drop_columns_yellow(con, table)
             if not table:  
                 continue
-            table = drop_columns_yellow(con, table)
+            table = remove_duplicates_yellow_green(con, table)
             if table:
                 tables.append(table)
 
         for year in years:
             table = f"green_{year}"
-            table = remove_duplicates_yellow_green(con, table)
+            table = drop_columns_green(con, table)
             if not table:  
                 continue
-            table = drop_columns_green(con, table)
+            table = remove_duplicates_yellow_green(con, table)
             if table:
                 tables.append(table)
 
@@ -52,8 +52,8 @@ def drop_columns_yellow(con, table):
             SELECT
                 tpep_pickup_datetime,
                 tpep_dropoff_datetime,
-                passenger_count,
-                trip_distance
+                CAST(passenger_count AS INTEGER) AS passenger_count,
+                CAST(trip_distance  AS DOUBLE) AS trip_distance
             FROM {table};
         """)
         con.execute(f"DROP TABLE {table};")
@@ -86,8 +86,8 @@ def drop_columns_green(con, table):
             SELECT
                 lpep_pickup_datetime,
                 lpep_dropoff_datetime,
-                passenger_count,
-                trip_distance
+                CAST(passenger_count AS INTEGER) AS passenger_count,
+                CAST(trip_distance  AS DOUBLE) AS trip_distance
             FROM {table};
         """)
         con.execute(f"DROP TABLE {table};")
