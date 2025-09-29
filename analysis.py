@@ -557,6 +557,49 @@ def plot_co2_month_by_co2totals(years=range(2024, 2025), db_path='./emissions.du
         fig.savefig('./month_co2totals_yellow_green.png', dpi=150)
         plt.close(fig)
 
+
+        # plt.figure(figsize=(10, 8), dpi=150)
+
+        # years_list = list(range(start_year, end_year))
+        # grid = [(yr, mo) for yr in years_list for mo in range(1, 13)]
+        # abbr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+        # x_labels = [f"{yr}-{abbr[mo-1]}" for (yr, mo) in grid]
+        # x_pos = list(range(len(grid)))
+
+        # y_dict = {(int(yr), int(mo)): float(val) for (yr, mo, val) in month_totalco2_yellow} 
+        # y_series = [y_dict.get(key, 0.0) for key in grid]
+        # plt.plot(x_pos, y_series, marker='o', color='#FFCE1B', label='yellow')
+
+        # plt.gca().spines['top'].set_visible(False)
+        # plt.gca().spines['right'].set_visible(False)
+
+        # max_labels = 24 
+        # step = max(1, len(x_pos) // max_labels)
+        # tick_idx = x_pos[::step]
+        # plt.xticks(tick_idx, [x_labels[i] for i in tick_idx], rotation=45, ha='right')
+
+        # plt.ylabel('Total CO2 (kg)')
+        # plt.legend()
+
+        # # plotting green
+        # # plt.figure(figsize=(10,6), dpi=150)
+
+        # g_dict = {(int(yr), int(mo)): float(val) for (yr, mo, val) in month_totalco2_green}
+        # g_series = [g_dict.get(key, 0.0) for key in grid]
+        # plt.plot(x_pos, g_series, marker='o', color='#008000', label='green')
+
+        # plt.gca().spines['top'].set_visible(False)
+        # plt.gca().spines['right'].set_visible(False)
+        # plt.xticks(tick_idx, [x_labels[i] for i in tick_idx], rotation=45, ha='right')
+        # plt.xlabel('Month')
+        # plt.ylabel('Total CO2 (kg)')
+        # plt.legend()
+
+        # plt.title('Monthly CO2 Totals by Taxi Type', fontsize=16, fontweight='bold')
+        # plt.savefig('./month_co2totals_yellow_green_together.png', dpi=150)
+        # plt.close(plt)
+
+
     except Exception as e:
         print(f"Unable to plot the months and co2 totals={list(years)}: {e}")
         logger.warning(f"Unable to plot the months and co2 totals={list(years)}: {e}")
