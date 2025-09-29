@@ -209,12 +209,21 @@ def zero_passengers_removed(tables):
                 logger.warning(f"{each_table}: no passenger_count column; skipping")
                 continue
 
-            con.execute(f"""
-                DELETE FROM {each_table} 
-                WHERE passenger_count <= 0
-                    OR passenger_count IS NULL;
-            """)
-            logger.info(f"{each_table}: removed zero/negative passengers ride observations")
+            try:
+                con.execute(f"""BEGIN TRANSACTION;""")
+                con.execute(f"""
+                    DELETE FROM {each_table} 
+                    WHERE COALESCE(passenger_count, 0) <= 0
+                """)
+                con.execute("COMMIT;")
+                logger.info(f"{each_table}: removed zero/negative passengers ride observations")
+
+            except Exception as e:
+                try: 
+                    con.execute("ROLLBACK;")
+                except Exception: 
+                    pass
+                logger.error(f"{each_table}: failed to remove zero/NULL passengers: {e}")
 
     except Exception as e:
         print(f"An error occurred for yellow green taxi parquet loading: {e}")
@@ -242,12 +251,21 @@ def zero_miles_removed(tables):
                 logger.warning(f"{each_table}: no trip_distance column; skipping")
                 continue
 
-            con.execute(f"""
-                DELETE FROM {each_table} 
-                WHERE trip_distance <= 0.0
-                    OR trip_distance IS NULL;
-            """)
-            logger.info(f"{each_table}: removed zero/negative mile ride observations")
+            try:
+                con.execute(f"""BEGIN TRANSACTION;""")
+                con.execute(f"""
+                    DELETE FROM {each_table} 
+                    WHERE COALESCE(CAST(trip_distance AS DOUBLE), 0) <= 0.0;
+                """)
+                con.execute("COMMIT;")
+                logger.info(f"{each_table}: removed zero/negative mile ride observations")
+            
+            except Exception as e:
+                try: 
+                    con.execute("ROLLBACK;")
+                except Exception: 
+                    pass
+                logger.error(f"{each_table}: failed to remove trips with 0 miles: {e}")
 
     except Exception as e:
         print(f"An error occurred for yellow green taxi parquet loading: {e}")
@@ -275,11 +293,20 @@ def more_100mi_removed(tables):
                 logger.warning(f"{each_table}: no trip_distance column; skipping")
                 continue
             
-            con.execute(f"""
-                DELETE FROM {each_table} 
-                WHERE trip_distance > 100.0;
-            """)
-            logger.info(f"{each_table}: removed more than 100 miles ride observations")
+            try:
+                con.execute(f"""BEGIN TRANSACTION;""")
+                con.execute(f"""
+                    DELETE FROM {each_table} 
+                    WHERE COALESCE(CAST(trip_distance AS DOUBLE), 0) > 100.0;
+                """)
+                con.execute("COMMIT;")
+                logger.info(f"{each_table}: removed more than 100 miles ride observations")
+            except Exception as e:
+                try: 
+                    con.execute("ROLLBACK;")
+                except Exception: 
+                    pass
+                logger.error(f"{each_table}: failed to remove trips with more than 100 miles: {e}")
 
     except Exception as e:
         print(f"An error occurred for yellow green taxi parquet loading: {e}")
@@ -319,17 +346,25 @@ def more_24hr_removed(tables):
             if not pickup_col or not dropoff_col:
                 logger.warning(f"{each_table}: no recognized pickup/dropoff columns; skipping")
                 continue
-
-            # don't need to create table
-            con.execute(f"""
-                DELETE FROM {each_table}
-                WHERE {pickup_col} IS NOT NULL AND {dropoff_col} IS NOT NULL
-                    AND (
-                        EXTRACT(EPOCH FROM ({dropoff_col} - {pickup_col})) / 3600.0 > 24
-                        OR EXTRACT(EPOCH FROM ({dropoff_col} - {pickup_col})) / 3600.0 <= 0
-                    );
-            """)
-            logger.info(f"{each_table}: removed more than 24 hours ride observations")
+            
+            try:
+                con.execute(f"""BEGIN TRANSACTION;""")
+                con.execute(f"""
+                    DELETE FROM {each_table}
+                    WHERE {pickup_col} IS NOT NULL AND {dropoff_col} IS NOT NULL
+                        AND (
+                            date_diff('second', {pickup_col}, {dropoff_col}) <= 0
+                            OR date_diff('second', {pickup_col}, {dropoff_col}) > {24 * 3600}
+                        );
+                """)
+                con.execute("COMMIT;")
+                logger.info(f"{each_table}: removed more than 24 hours ride observations")
+            except Exception as e:
+                try: 
+                    con.execute("ROLLBACK;")
+                except Exception: 
+                    pass
+                logger.error(f"{each_table}: failed to remove trips that are more than 24 hours: {e}")
 
     except Exception as e:
         print(f"An error occurred for yellow green taxi parquet loading: {e}")
@@ -352,35 +387,47 @@ def tests(tables):
         # tables = get_yellow_green_tables(years)
 
         for table in tables:
-            # test to make sure table does exist
+            # 1. test to make sure table does exist
             try:
                 con.execute(f"SELECT 1 FROM {table} LIMIT 1")
             except Exception as e:
                 failures.append(f"[{table}] missing or unreadable: {e}")
+                logger.warning(f"{table} is missing or unreadable: {e}")
                 continue
 
-            # test to make sure duplicates were removed
+            # 2. test to make sure duplicates were removed
             total_rows = con.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
             distinct_rows = con.execute(f"SELECT COUNT(*) FROM (SELECT DISTINCT * FROM {table})").fetchone()[0]
             if total_rows != distinct_rows:
                 failures.append(f"[{table}] duplicates remain: total={total_rows}, distinct={distinct_rows}")
+                logger.warning(f"issue arose in {table}, total rows isn't equal to non-duplicated rows !")
+            else:
+                logger.info(f"{table}'s num total rows == num non-duplicated rows !")
 
 
-            # test to make sure there are more than 0 passengers per ride
+            # 3. test to make sure there are more than 0 passengers per ride
             bad_passenger = con.execute(
                 f"SELECT COUNT(*) FROM {table} WHERE passenger_count IS NULL OR passenger_count <= 0"
             ).fetchone()[0]
             if bad_passenger > 0:
                 failures.append(f"[{table}] passenger_count <= 0 rows: {bad_passenger}")
+                logger.warning(f"issue arose in {table}, there are at least 1 ride(s) with 0 passengers !")
+            else:
+                logger.info(f"all rides in {table} have at least 1 passenger !")
 
-            # test to make sure trip distances are more than 0 AND not greater than 100
+
+            # 4. test to make sure trip distances are more than 0 AND not greater than 100
             bad_distance = con.execute(
                 f"SELECT COUNT(*) FROM {table} WHERE trip_distance IS NULL OR trip_distance <= 0 OR trip_distance > 100"
             ).fetchone()[0]
             if bad_distance > 0:
                 failures.append(f"[{table}] out-of-bounds trip_distance rows: {bad_distance}")
+                logger.warning(f"issue arose in {table}, there exists at least 1 trip(s) where the ride is either 0 or less, or more than 100 miles !")
+            else:
+                logger.info(f"all rides in {table} are between 1 inclusive and 100 inclusive")
 
-            # test to make sure hours calculated from start to drop off aren't 0 or less nor over 24 hrs
+
+            # 5. test to make sure hours calculated from start to drop off aren't 0 or less nor over 24 hrs
             pickup, dropoff = None, None
             cols = [row[1] for row in con.execute(f"PRAGMA table_info('{table}')").fetchall()]
             if "tpep_pickup_datetime" in cols and "tpep_dropoff_datetime" in cols:
@@ -389,7 +436,7 @@ def tests(tables):
                 pickup, dropoff = "lpep_pickup_datetime", "lpep_dropoff_datetime"
 
             if pickup and dropoff:
-                dup_rows = con.execute(f"""
+                dup_groups = con.execute(f"""
                     SELECT COUNT(*) FROM (
                         SELECT {pickup}, {dropoff}, passenger_count, trip_distance, COUNT(*) c
                         FROM {table}
@@ -397,12 +444,11 @@ def tests(tables):
                         HAVING COUNT(*) > 1
                     )
                 """).fetchone()[0]
-            else:
-                # fallback (shouldn't really happen in pipeline)
-                dup_rows = con.execute(f"SELECT COUNT(*) FROM (SELECT DISTINCT * FROM {table})").fetchone()[0]
-
-            if dup_rows > 0:
-                failures.append(f"{table} duplicates remain: {dup_rows} duplicate groups")
+                if dup_groups > 0:
+                    failures.append(f"[{table}] duplicate groups by key: {dup_groups}")
+                    logger.warning(f"issue arose in {table}: there exists at least 1 pair of duplicated items in table !")
+                else:
+                    logger.info(f"{table} has no duplicated values")
 
             if pickup and dropoff:
                 null_ts = con.execute(f"""
@@ -413,17 +459,23 @@ def tests(tables):
                     logger.warning(f"[{table}] rows with NULL {pickup}/{dropoff}: {null_ts}")
 
                 bad_time = con.execute(f"""
-                    WITH u AS (
-                        SELECT EXTRACT(EPOCH FROM ({dropoff} - {pickup})) / 3600.0 AS hrs
-                        FROM {table}
-                        WHERE {pickup} IS NOT NULL AND {dropoff} IS NOT NULL
+                    SELECT COUNT(*)
+                    FROM {table}
+                    WHERE {pickup} IS NOT NULL
+                        AND {dropoff} IS NOT NULL
+                        AND (
+                            date_diff('second', {pickup}, {dropoff}) <= 0
+                            OR date_diff('second', {pickup}, {dropoff}) > {24*3600}
                     )
-                    SELECT COUNT(*) FROM u WHERE hrs <= 0 OR hrs > 24
                 """).fetchone()[0]
+
                 if bad_time > 0:
                     failures.append(f"[{table}] out-of-bounds duration rows: {bad_time}")
+                    logger.warning(f"issue arose in {table}, there exists at least 1 trip(s) where the ride is either 0 or less hours, or more than 24 hrs !")
+                else:
+                    logger.info(f"all trips in {table} are either between 1 inclusive to 24 hours inclusive")
 
-        # testing vehicle_emissions table - smaller than other yellow green ones
+        # 6. testing vehicle_emissions table - smaller than other yellow green ones
         table = "vehicle_emissions"
         try:
             con.execute(f"SELECT 1 FROM {table} LIMIT 1")
@@ -431,12 +483,18 @@ def tests(tables):
             distinct_rows = con.execute(f"SELECT COUNT(*) FROM (SELECT DISTINCT * FROM {table})").fetchone()[0]
             if total_rows != distinct_rows:
                 failures.append(f"[{table}] duplicates remain: total={total_rows}, distinct={distinct_rows}")
+                logger.warning(f"issue arose: {table} has duplicates !")
+            else:
+                logger.info(f"{table} has no duplicates")
 
             neg_co2 = con.execute(
                 f"SELECT COUNT(*) FROM {table} WHERE co2_grams_per_mile < 0"
             ).fetchone()[0]
             if neg_co2 > 0:
                 failures.append(f"[{table}] negative co2_grams_per_mile rows: {neg_co2}")
+                logger.warning(f"issue arose: {table} has negative co2_grams_per_mile !")
+            else: 
+                logger.info(f"{table} has no negative co2_grams_per_mile values")
 
             unreasonable_years = con.execute(f"""
                 SELECT COUNT(*) FROM {table}
@@ -444,10 +502,15 @@ def tests(tables):
             """).fetchone()[0]
             if unreasonable_years > 0:
                 failures.append(f"[{table}] out-of-range/NULL vehicle_year_avg rows: {unreasonable_years}")
+                logger.warning(f"{table} has years less than 1980 or greater than 2035 !")
+            else:
+                logger.info(f"{table} has no years outside the range of 1980 to 2035")
 
             logger.info(f"[{table}] tested OK")
+
         except Exception as e:
             failures.append(f"[{table}] missing or unreadable: {e}")
+            logger.warning(f"{table} is missing or unreadable")
 
         # Final results print of all tests pass, or some fail :(
         if failures:
@@ -476,16 +539,16 @@ if __name__ == "__main__":
     remove_duplicates_vehicle_emissions()
 
     # remove trips with 0 passengers
-    # zero_passengers_removed(tables)
+    zero_passengers_removed(tables)
 
-    # # remove trips 0 miles in length
-    # zero_miles_removed(tables)
+    # remove trips 0 miles in length
+    zero_miles_removed(tables)
 
-    # # remove trips greater than 100 miles in length
-    # more_100mi_removed(tables)
+    # remove trips greater than 100 miles in length
+    more_100mi_removed(tables)
 
-    # # remove trips greater than 24 hours in length
-    # more_24hr_removed(tables)
+    # remove trips greater than 24 hours in length
+    more_24hr_removed(tables)
 
-    # # include tests - all methods above !
-    # tests(tables)
+    # include tests - all methods above !
+    tests(tables)
