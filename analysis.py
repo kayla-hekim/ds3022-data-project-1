@@ -314,6 +314,7 @@ def carbon_heavy_light_week (years=range(2024, 2025), db_path='./emissions.duckd
                 AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
                 AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
                 AND trip_co2_kgs IS NOT NULL
+                AND week_of_year BETWEEN 1 AND 52
             GROUP BY week_of_year
             ORDER BY week_of_year;
         """).fetchall()
@@ -327,6 +328,7 @@ def carbon_heavy_light_week (years=range(2024, 2025), db_path='./emissions.duckd
                 AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
                 AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
                 AND trip_co2_kgs IS NOT NULL
+                AND week_of_year BETWEEN 1 AND 52
             GROUP BY week_of_year
             ORDER BY week_of_year;
         """).fetchall()
@@ -475,7 +477,131 @@ def carbon_heavy_light_month (years=range(2024, 2025), db_path='./emissions.duck
 
 
 
-def plot_co2_month_by_co2totals(years=range(2024, 2025), db_path='./emissions2024.duckdb'):
+# def plot_co2_month_by_co2totals(years=range(2024, 2025), db_path='./emissions.duckdb'):
+#     con = None
+
+#     try:
+#         start_year = min(years)
+#         end_year = max(years) + 1
+#         con = duckdb.connect(database=db_path, read_only=True)
+#         logger.info(f"Connected to DuckDB for heavy and light carbon months: years={list(years)}")
+
+#         month_totalco2_yellow = con.execute(f"""
+#             SELECT
+#                 trip_year AS yr,
+#                 month_of_year AS mo,
+#                 SUM(trip_co2_kgs) AS total_co2_kgs
+#             FROM data_transformation
+#             WHERE vehicle_type = 'yellow_taxi'
+#                 AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
+#                 AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
+#                 AND trip_co2_kgs IS NOT NULL
+#             GROUP BY yr, mo
+#             ORDER BY yr, mo;
+#         """).fetchall()
+
+#         month_totalco2_green = con.execute(f"""
+#             SELECT
+#                 trip_year AS yr,
+#                 month_of_year AS mo,
+#                 SUM(trip_co2_kgs) AS total_co2_kgs
+#             FROM data_transformation
+#             WHERE vehicle_type = 'green_taxi'
+#                 AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
+#                 AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
+#                 AND trip_co2_kgs IS NOT NULL
+#             GROUP BY yr, mo
+#             ORDER BY yr, mo;
+#         """).fetchall()
+
+
+#         # plotting yellow        
+#         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), dpi=150, sharex=True, constrained_layout=True)
+
+#         month_list_yellow = []
+#         co2_total_list_yellow = []
+#         for each in month_totalco2_yellow:
+#             mo = each[0]
+#             co2 = float(each[1])
+#             month_list_yellow.append(mo)
+#             co2_total_list_yellow.append(co2)
+
+#         months = np.arange(1, 13)
+#         map_yellow= {}
+#         for month in months:
+#             map_yellow[int(month)] = 0.0
+
+#         for i in range(len(month_list_yellow)):
+#             month = int(month_list_yellow[i])
+#             co2 = float(co2_total_list_yellow[i])
+#             map_yellow[month] = co2
+
+#         month_list_yellow = list(months)
+#         co2_total_list_yellow = [map_yellow[m] for m in months]
+
+#         ax1.plot(month_list_yellow, co2_total_list_yellow, marker = 'o', color='#FFCE1B', label='yellow')
+
+#         ax1.spines['top'].set_visible(False)
+#         ax1.spines['right'].set_visible(False)
+#         labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+#         # ax1.xlim(1, 12)
+#         ax1.set_xticks(months, labels)
+#         # ax1.set_xlabel('Month')
+#         ax1.set_ylabel('Total CO2 (kg)')
+#         ax1.legend()
+
+
+#         # plotting green
+#         plt.figure(figsize=(10,6), dpi=150)
+        
+#         month_list_green = []
+#         co2_total_list_green = []
+#         for each in month_totalco2_green:
+#             mo = each[0]
+#             co2 = float(each[1])
+#             month_list_green.append(mo)
+#             co2_total_list_green.append(co2)
+
+#         months = np.arange(1, 13)
+#         map_green = {}
+#         for month in months:
+#             map_green[int(month)] = 0.0
+
+#         for i in range(len(month_list_green)):
+#             month = int(month_list_green[i])
+#             co2 = float(co2_total_list_green[i])
+#             map_green[month] = co2
+
+#         month_list_green = list(months)
+#         co2_total_list_green = [map_green[m] for m in months]
+
+#         ax2.plot(month_list_green, co2_total_list_green, marker = 'o', color='#008000', label='green')
+
+#         ax2.spines['top'].set_visible(False)
+#         ax2.spines['right'].set_visible(False)
+#         labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+#         # ax2.xlim(1, 12)
+#         ax2.set_xticks(months, labels)
+#         ax2.set_xlabel('Month')
+#         ax2.set_ylabel('Total CO2 (kg)')
+#         ax2.legend()
+
+#         fig.suptitle('Monthly CO2 Totals by Taxi Type', fontsize=16, fontweight='bold')
+#         fig.savefig('./month_co2totals_yellow_green.png', dpi=150)
+#         plt.close(fig)
+
+#     except Exception as e:
+#         print(f"Unable to plot the months and co2 totals={list(years)}: {e}")
+#         logger.error(f"Unable to plot the months and co2 totals={list(years)}: {e}")
+#         return None
+
+#     finally:
+#         if con:
+#             con.close()
+
+
+
+def plot_co2_month_by_co2totals(years=range(2024, 2025), db_path='./emissions.duckdb'):
     con = None
 
     try:
@@ -486,98 +612,72 @@ def plot_co2_month_by_co2totals(years=range(2024, 2025), db_path='./emissions202
 
         month_totalco2_yellow = con.execute(f"""
             SELECT
-                month_of_year AS month,
+                trip_year AS yr,
+                month_of_year AS mo,
                 SUM(trip_co2_kgs) AS total_co2_kgs
             FROM data_transformation
             WHERE vehicle_type = 'yellow_taxi'
                 AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
                 AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
                 AND trip_co2_kgs IS NOT NULL
-            GROUP BY month_of_year
-            ORDER BY month_of_year;
+            GROUP BY yr, mo
+            ORDER BY yr, mo;
         """).fetchall()
 
         month_totalco2_green = con.execute(f"""
             SELECT
-                month_of_year AS month,
+                trip_year AS yr,
+                month_of_year AS mo,
                 SUM(trip_co2_kgs) AS total_co2_kgs
             FROM data_transformation
             WHERE vehicle_type = 'green_taxi'
                 AND pickup_ts >= TIMESTAMP '{start_year}-01-01'
                 AND pickup_ts <  TIMESTAMP '{end_year}-01-01'
                 AND trip_co2_kgs IS NOT NULL
-            GROUP BY month_of_year
-            ORDER BY month_of_year;
+            GROUP BY yr, mo
+            ORDER BY yr, mo;
         """).fetchall()
 
 
         # plotting yellow        
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10), dpi=150, sharex=True, constrained_layout=True)
 
-        month_list_yellow = []
-        co2_total_list_yellow = []
-        for each in month_totalco2_yellow:
-            mo = each[0]
-            co2 = float(each[1])
-            month_list_yellow.append(mo)
-            co2_total_list_yellow.append(co2)
+        years_list = list(range(start_year, end_year))                    # NEW
+        grid = [(yr, mo) for yr in years_list for mo in range(1, 13)]    # NEW
+        abbr = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']  # NEW
+        x_labels = [f"{yr}-{abbr[mo-1]}" for (yr, mo) in grid]            # NEW
+        x_pos = list(range(len(grid)))                                    # NEW
 
-        months = np.arange(1, 13)
-        map_yellow= {}
-        for month in months:
-            map_yellow[int(month)] = 0.0
+        # === CHANGED: map query rows to the grid (fill 0 for missing months) ===
+        y_dict = {(int(yr), int(mo)): float(val) for (yr, mo, val) in month_totalco2_yellow}  # CHANGED
+        y_series = [y_dict.get(key, 0.0) for key in grid]                                       # CHANGED
 
-        for i in range(len(month_list_yellow)):
-            month = int(month_list_yellow[i])
-            co2 = float(co2_total_list_yellow[i])
-            map_yellow[month] = co2
-
-        month_list_yellow = list(months)
-        co2_total_list_yellow = [map_yellow[m] for m in months]
-
-        ax1.plot(month_list_yellow, co2_total_list_yellow, marker = 'o', color='#FFCE1B', label='yellow')
+        ax1.plot(x_pos, y_series, marker='o', color='#FFCE1B', label='yellow')  # CHANGED
 
         ax1.spines['top'].set_visible(False)
         ax1.spines['right'].set_visible(False)
-        labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-        # ax1.xlim(1, 12)
-        ax1.set_xticks(months, labels)
-        # ax1.set_xlabel('Month')
+
+        # === CHANGED: dynamic ticks so many months remain readable ===
+        max_labels = 24                                                     # NEW (show up to ~24 labels)
+        step = max(1, len(x_pos) // max_labels)                             # NEW
+        tick_idx = x_pos[::step]                                            # NEW
+        ax1.set_xticks(tick_idx, [x_labels[i] for i in tick_idx], rotation=45, ha='right')  # CHANGED
+
         ax1.set_ylabel('Total CO2 (kg)')
         ax1.legend()
 
-
         # plotting green
-        plt.figure(figsize=(10,6), dpi=150)
-        
-        month_list_green = []
-        co2_total_list_green = []
-        for each in month_totalco2_green:
-            mo = each[0]
-            co2 = float(each[1])
-            month_list_green.append(mo)
-            co2_total_list_green.append(co2)
+        # plt.figure(figsize=(10,6), dpi=150)  # REMOVED: stray extra figure
 
-        months = np.arange(1, 13)
-        map_green = {}
-        for month in months:
-            map_green[int(month)] = 0.0
+        # === CHANGED: map green to the same grid ===
+        g_dict = {(int(yr), int(mo)): float(val) for (yr, mo, val) in month_totalco2_green}   # CHANGED
+        g_series = [g_dict.get(key, 0.0) for key in grid]                                      # CHANGED
 
-        for i in range(len(month_list_green)):
-            month = int(month_list_green[i])
-            co2 = float(co2_total_list_green[i])
-            map_green[month] = co2
-
-        month_list_green = list(months)
-        co2_total_list_green = [map_green[m] for m in months]
-
-        ax2.plot(month_list_green, co2_total_list_green, marker = 'o', color='#008000', label='green')
+        ax2.plot(x_pos, g_series, marker='o', color='#008000', label='green')  # CHANGED
 
         ax2.spines['top'].set_visible(False)
         ax2.spines['right'].set_visible(False)
-        labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-        # ax2.xlim(1, 12)
-        ax2.set_xticks(months, labels)
+        ax2.set_xticks(tick_idx, [x_labels[i] for i in tick_idx], rotation=45, ha='right')     # CHANGED
         ax2.set_xlabel('Month')
         ax2.set_ylabel('Total CO2 (kg)')
         ax2.legend()
@@ -604,14 +704,11 @@ if __name__ == "__main__":
 
     # SINGLE LARGEST CARBON TRIP OF THE YEARS - YELLOW THEN GREEN:
     print("1. Single largest carbon trip of year(s):\n")
-    for year in years:
-        yellow_largest_carbon = single_largest_carbon_trip_year('yellow', years)
-        green_largest_carbon = single_largest_carbon_trip_year('green', years)
-        pretty_print_largest_carbon_trip("yellow", yellow_largest_carbon, years)
-        print("\n")
-        pretty_print_largest_carbon_trip("green", green_largest_carbon, years)
-
-        print("\n")
+    yellow_largest_carbon = single_largest_carbon_trip_year('yellow', years)
+    green_largest_carbon  = single_largest_carbon_trip_year('green',  years)
+    pretty_print_largest_carbon_trip("yellow", yellow_largest_carbon, years)
+    print("\n")
+    pretty_print_largest_carbon_trip("green",  green_largest_carbon,  years)
     print("\n")
 
     # MIN AND MAX CARBON HOURS (AVERAGES) - YELLOW THEN GREEN:
@@ -666,8 +763,8 @@ if __name__ == "__main__":
         yellow_mo_min, yellow_mo_max, green_mo_min, green_mo_max = results_months
         print(f"yellow carbon month min: (month {yellow_mo_min[0]},  {yellow_mo_min[1]:.5f} kg CO2 per trip), \nyellow carbon month max: (month {yellow_mo_max[0]},  {yellow_mo_max[1]:.5f} kg CO2 per trip)\n")
         logger.info(f"yellow carbon month min: (month {yellow_mo_min[0]},  {yellow_mo_min[1]:.5f} kg CO2 per trip), \nyellow carbon month max: (month {yellow_mo_max[0]},  {yellow_mo_max[1]:.5f} kg CO2 per trip)\n")
-        print(f"green carbon month min: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
-        logger.info(f"green carbon month min: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
+        print(f"green carbon month min: (month {green_mo_min[0]},  {green_mo_min[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
+        logger.info(f"green carbon month min: (month {green_mo_min[0]},  {green_mo_min[1]:.5f} kg CO2 per trip), \ngreen carbon month max: (month {green_mo_max[0]},  {green_mo_max[1]:.5f} kg CO2 per trip)\n")
     print("\n")
     
     # PLOTTING FOR MONTH BY CO2 (Matplotlib.pyplot)
