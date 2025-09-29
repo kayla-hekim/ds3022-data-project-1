@@ -532,7 +532,7 @@ def tests(tables):
 if __name__ == "__main__":
     # get tables for later methods:
     # years = range(2015, 2025) 
-    years = range(2023, 2025) # testing
+    years = range(2015, 2025) # testing
     tables = get_yellow_green_tables(years)
 
     # remove duplicates vehicle_emissions (yellow green is in get_yellow_green_tables)
