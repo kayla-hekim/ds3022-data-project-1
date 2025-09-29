@@ -20,7 +20,7 @@ PROJECT_DIR = Path(__file__).resolve().parent
 DBT_DIR = PROJECT_DIR / "dbt"   
 DB_PATH = PROJECT_DIR / "emissions.duckdb"
 
-
+# subprocess document to call CLI: https://stackoverflow.com/questions/4364087/python-subprocess-using-import-subprocess
 # call the dbt command (might be the same neal and the TA uses?)
 def run_dbt():
     cmd = ["dbt", "build", "-s", "+data_transformation", "--profiles-dir", "."]
