@@ -29,7 +29,7 @@ def run_dbt():
         logger.info("subprocess worked! DBT ran with transform command 'dbt build --profiles-dir .'")
     except subprocess.CalledProcessError as e:
         sys.exit(f"dbt build failed: {e}")
-        logger.error(f"DBT build failed: {e}")
+        logger.warning(f"DBT build failed: {e}")
 
 
 # testing nulls of mph and co2 columns
@@ -48,7 +48,7 @@ def run_dbt():
 #         logger.info(f"able to run qa to test mph and co2 columns: {qa}")
 #     except Exception as e:
 #         print(f"error in executing null tests for either mph or co2 columns")
-#         logger.error(f"error in executing null tests for either mph or co2 columns")
+#         logger.warning(f"error in executing null tests for either mph or co2 columns")
 
 
 # outputting data_transform table to a csv data_transformation_sample.csv
@@ -65,7 +65,7 @@ def run_dbt():
 #         logger.info(f"Wrote data_transformation_sample.csv")
 #     except Exception as e:
 #         print(f"error in outputting data_transformation as a csv")
-#         logger.error(f"error in outputting data_transformation as a csv")
+#         logger.warning(f"error in outputting data_transformation as a csv")
 
 
 # Call all methods from transform.py here

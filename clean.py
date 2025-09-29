@@ -62,7 +62,7 @@ def drop_columns_yellow(con, table):
         return table
     
     except Exception as e:
-        logger.error(f"Issue dropping yellow columns in {table}: {e}")
+        logger.warning(f"Issue dropping yellow columns in {table}: {e}")
 
         try:
             con.execute("ROLLBACK;")
@@ -93,10 +93,13 @@ def drop_columns_green(con, table):
         con.execute(f"DROP TABLE {table};")
         con.execute(f"ALTER TABLE {temp} RENAME TO {table};")
         con.execute("COMMIT;")
+        print(f"dropped columns from {table}")
+        logger.info(f"dropped columns from {table}")
         return table
     
     except Exception as e:
-        logger.error(f"Issue dropping green columns in {table}: {e}")
+        logger.warning(f"Issue dropping green columns in {table}: {e}")
+        print(f"Issue dropping green columns in {table}: {e}")
 
         try:
             con.execute("ROLLBACK;")
@@ -123,11 +126,13 @@ def remove_duplicates_yellow_green(con, table):
         con.execute(f"DROP TABLE {table};")
         con.execute(f"ALTER TABLE {temp} RENAME TO {table};")
         con.execute(f"""COMMIT;""")
+        print(f"removing duplicates from {table}")
+        logger.info(f"removing duplicates from {table}")
         return table
     
     except Exception as e:
         print(f"wasn't able to remove duplicates for {table}")
-        logger.error(f"wasn't able to remove duplicates for {table}")
+        logger.warning(f"wasn't able to remove duplicates for {table}")
 
         try: 
             con.execute("ROLLBACK;")
@@ -169,12 +174,13 @@ def remove_duplicates_vehicle_emissions():
         con.execute(f"DROP TABLE {table_name};")
         con.execute(f"ALTER TABLE {temp} RENAME TO {table_name};")
         con.execute(f"""COMMIT;""")
+        print(f"{table_name}: removed duplicate values in vehicle_emissions")
         logger.info(f"{table_name}: removed duplicate values in vehicle_emissions")
         return table_name
 
     except Exception as e:
         print(f"An error occurred for removing duplicates from vehicle_emisisons: {e}")
-        logger.error(f"An error occurred for removing duplicates from vehicle_emisisons: {e}")
+        logger.warning(f"An error occurred for removing duplicates from vehicle_emisisons: {e}")
 
         try: 
             con.execute("ROLLBACK;")
@@ -223,11 +229,11 @@ def zero_passengers_removed(tables):
                     con.execute("ROLLBACK;")
                 except Exception: 
                     pass
-                logger.error(f"{each_table}: failed to remove zero/NULL passengers: {e}")
+                logger.warning(f"{each_table}: failed to remove zero/NULL passengers: {e}")
 
     except Exception as e:
         print(f"An error occurred for yellow green taxi parquet loading: {e}")
-        logger.error(f"An error occurred while removing rides with zero passengers: {e}")
+        logger.warning(f"An error occurred while removing rides with zero passengers: {e}")
 
     finally:
         if con:
@@ -265,11 +271,11 @@ def zero_miles_removed(tables):
                     con.execute("ROLLBACK;")
                 except Exception: 
                     pass
-                logger.error(f"{each_table}: failed to remove trips with 0 miles: {e}")
+                logger.warning(f"{each_table}: failed to remove trips with 0 miles: {e}")
 
     except Exception as e:
         print(f"An error occurred for yellow green taxi parquet loading: {e}")
-        logger.error(f"An error occurred while removing rides with zero miles: {e}")
+        logger.warning(f"An error occurred while removing rides with zero miles: {e}")
 
     finally:
         if con:
@@ -306,11 +312,11 @@ def more_100mi_removed(tables):
                     con.execute("ROLLBACK;")
                 except Exception: 
                     pass
-                logger.error(f"{each_table}: failed to remove trips with more than 100 miles: {e}")
+                logger.warning(f"{each_table}: failed to remove trips with more than 100 miles: {e}")
 
     except Exception as e:
         print(f"An error occurred for yellow green taxi parquet loading: {e}")
-        logger.error(f"An error occurred while removing rides with more than 100 miles: {e}")
+        logger.warning(f"An error occurred while removing rides with more than 100 miles: {e}")
 
     finally:
         if con:
@@ -364,11 +370,11 @@ def more_24hr_removed(tables):
                     con.execute("ROLLBACK;")
                 except Exception: 
                     pass
-                logger.error(f"{each_table}: failed to remove trips that are more than 24 hours: {e}")
+                logger.warning(f"{each_table}: failed to remove trips that are more than 24 hours: {e}")
 
     except Exception as e:
         print(f"An error occurred for yellow green taxi parquet loading: {e}")
-        logger.error(f"An error occurred while removing rides with more than 24 hours: {e}")
+        logger.warning(f"An error occurred while removing rides with more than 24 hours: {e}")
 
     finally:
         if con:
@@ -517,7 +523,7 @@ def tests(tables):
             print(f"tests have FAILED for {len(failures)} test cases in clean")
             for f in failures:
                 print(" -", f)
-            logger.error(f"tests have FAILED for all methods in clean with {len(failures)} failed tests ")
+            logger.warning(f"tests have FAILED for all methods in clean with {len(failures)} failed tests ")
         else:
             print("tests have passed for all methods in clean")
             logger.info("tests have passed for all methods in clean - nothing in list 'failures'")
@@ -531,8 +537,8 @@ def tests(tables):
 # Call all methods from load.py here
 if __name__ == "__main__":
     # get tables for later methods:
-    # years = range(2015, 2025) 
-    years = range(2015, 2025) # testing
+    years = range(2015, 2025) 
+    # years = range(2023, 2025) # testing
     tables = get_yellow_green_tables(years)
 
     # remove duplicates vehicle_emissions (yellow green is in get_yellow_green_tables)

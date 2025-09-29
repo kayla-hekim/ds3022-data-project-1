@@ -87,7 +87,7 @@ def load_parquet_files(years=range(2024, 2025)):
 
     except Exception as e:
         print(f"An error occurred for yellow green taxi parquet loading: {e}")
-        logger.error(f"An error occurred yellow green taxi parquet loading: {e}")
+        logger.warning(f"An error occurred yellow green taxi parquet loading: {e}")
 
     finally:
         if con:
@@ -121,7 +121,7 @@ def load_vehicle_emissions_csv(file_name):
 
     except Exception as e:
         print(f"An error occurred for vehicle emissions loading: {e}")
-        logger.error(f"An error occurred for vehicle emissions loading: {e}")
+        logger.warning(f"An error occurred for vehicle emissions loading: {e}")
     
     finally:
         if con:
@@ -283,7 +283,7 @@ def basic_data_summarizations(years=range(2024, 2025)):
 
     except Exception as e:
         print(f"Error in summarization: {e}")
-        logger.error(f"Error in summarization: {e}")
+        logger.warning(f"Error in summarization: {e}")
     finally:
         if con:
             con.close()
